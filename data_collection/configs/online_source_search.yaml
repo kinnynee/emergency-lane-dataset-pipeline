@@ -1,0 +1,11 @@
+project_scope: "Internet chỉ bổ sung; K230 tự quay là nguồn chính"
+preferred_source_order:
+  - official_university_or_lab
+  - official_dataset_or_paper_project
+  - official_research_repository
+  - official_author_release
+  - licensed_dataset_platform
+  - licensed_stock_footage
+  - needs_permission
+prohibited_automatic_download_sources: [youtube, paywall, login_bypass, unknown_license]
+search_status_default: NOT_STARTED

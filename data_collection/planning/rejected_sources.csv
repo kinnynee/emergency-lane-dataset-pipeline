@@ -1,0 +1,4 @@
+rejection_id,source_id,source_name,date_reviewed,rejection_reason,legal_risk,technical_risk,reviewed_by,evidence_link,notes
+REJ_GH001,,traffic-surveillance-dataset GitHub index,2026-07-29,Repository chỉ là danh mục liên kết và không chứa dataset hay release,UNKNOWN,HIGH,Codex,https://github.com/gustavovelascoh/traffic-surveillance-dataset,"Giữ làm tài liệu khám phá nguồn; không đưa vào queue tải"
+REJ_GH002,,Taiwanese-Traffic-Object-Detection,2026-07-29,README xác nhận dữ liệu cuộc thi được giữ bí mật nên không có quyền tải hoặc sử dụng,HIGH,LOW,Codex,https://github.com/achen353/Taiwanese-Traffic-Object-Detection,"Repo chỉ có mã, trọng số và minh họa"
+REJ_GH003,,YOLOP,2026-07-29,Repository là mã mô hình dùng BDD100K chứ không phải nguồn media độc lập,LOW,LOW,Codex,https://github.com/hustvl/YOLOP,"Không nhân đôi SRC_ONL004"

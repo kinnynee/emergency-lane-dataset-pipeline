@@ -1,0 +1,24 @@
+task_id,task_name,description,owner,supporter,priority,planned_start,planned_end,status,dependency,expected_output,evidence_required,evidence_link,notes
+DC001,Khảo sát vị trí đặt camera K230,Chấm điểm các vị trí ứng viên,SV1,SV3,HIGH,2026-07-27,2026-07-29,NOT_STARTED,,Phiếu khảo sát,Có,,Theo PDF kế hoạch tuần 1
+DC002,Chốt vị trí quay với giảng viên,Xác nhận vị trí sau khảo sát,SV1,GVHD,HIGH,2026-07-30,2026-07-31,NOT_STARTED,DC001,Vị trí được duyệt,Có,,Không tự kết luận trước khi duyệt
+DC003,Kiểm tra thiết bị K230,Kiểm tra nguồn thẻ nhớ góc quay và đồng hồ,SV1,SV3,HIGH,2026-07-27,2026-07-31,NOT_STARTED,,Biên bản kiểm tra,Có,,
+DC004,Quay thử dữ liệu ban ngày,Quay tại góc demo đã cho phép,SV1,SV5,HIGH,2026-08-03,2026-08-07,NOT_STARTED,DC002;DC003,Video lưu ngoài Git,Có,,
+DC005,Quay thử dữ liệu ban đêm,Thu điều kiện thiếu sáng an toàn,SV1,SV5,HIGH,2026-08-03,2026-08-14,NOT_STARTED,DC002;DC003,Video lưu ngoài Git,Có,,
+DC006,Quay dữ liệu ngược sáng,Thu chói nắng hoặc đèn pha an toàn,SV1,SV5,HIGH,2026-08-03,2026-08-21,NOT_STARTED,DC002;DC003,Video lưu ngoài Git,Có,,
+DC007,Quay dữ liệu mưa hoặc đường ướt,Chỉ quay khi điều kiện và thiết bị an toàn,SV1,SV5,HIGH,2026-08-03,2026-08-28,NOT_STARTED,DC002;DC003,Video lưu ngoài Git,Có,,
+DC008,Quay xe chạy xuyên ROI,Không dừng xe trong vùng,SV1,SV3,HIGH,2026-08-03,2026-08-21,NOT_STARTED,DC002,Video kịch bản,Có,,
+DC009,Quay xe dừng trong ROI,Chỉ dàn dựng ở khu vực an toàn được phép,SV1,SV3,HIGH,2026-08-03,2026-08-21,NOT_STARTED,DC002,Video kịch bản,Có,,
+DC010,Quay xe rời khỏi ROI,Ghi chuỗi dừng rồi rời,SV1,SV3,HIGH,2026-08-03,2026-08-21,NOT_STARTED,DC009,Video kịch bản,Có,,
+DC011,Quay nền không có xe,Thu negative ở cùng góc camera,SV1,SV5,MEDIUM,2026-08-03,2026-08-21,NOT_STARTED,DC002,Video negative,Có,,
+DC012,Tìm dữ liệu bổ sung Internet,Chỉ tìm điều kiện K230 còn thiếu,SV1,SV2,LOW,2026-08-03,2026-08-21,NOT_STARTED,,Registry nguồn,Có,,
+DC013,Kiểm tra nguồn và bản quyền,Xác minh từng quyền train công bố phân phối,SV1,SV5,HIGH,2026-08-03,2026-08-28,NOT_STARTED,DC012,Quyết định quyền có evidence,Có,,
+DC014,Tách frame,Tách có kiểm soát và giữ liên kết video,SV1,SV2,HIGH,2026-08-03,2026-08-28,NOT_STARTED,DC004,Ảnh và metadata ngoài Git,Có,,
+DC015,Lọc ảnh trùng,Phát hiện trùng hoàn toàn và gần trùng,SV1,SV5,HIGH,2026-08-03,2026-08-28,NOT_STARTED,DC014,Danh sách loại,Có,,
+DC016,Gán nhãn,Gán lớp vehicle theo guideline,SV1,Nhóm,HIGH,2026-08-03,2026-08-28,NOT_STARTED,DC015,Nhãn YOLO,Có,,
+DC017,Kiểm tra nhãn,Review chéo 10 đến 20 phần trăm,SV1,SV2,HIGH,2026-08-10,2026-08-28,NOT_STARTED,DC016,Log review,Có,,
+DC018,Chia train validation và test,Chia theo session hoặc video và khóa test,SV1,SV2,HIGH,2026-08-24,2026-08-28,NOT_STARTED,DC017,Manifest split,Có,,
+DC019,Thực hiện EDA,Kiểm tra phân bố chất lượng và leakage,SV1,SV5,HIGH,2026-08-24,2026-10-02,NOT_STARTED,DC018,Báo cáo EDA,Có,,
+DC020,Tạo dataset card,Ghi phạm vi nguồn hạn chế và quyền,SV1,SV5,MEDIUM,2026-08-24,2026-10-09,NOT_STARTED,DC019,Dataset card,Có,,
+DC021,Phát hành dataset-v0.1,Pipeline thử nghiệm khoảng 500 ảnh,SV1,SV2,HIGH,2026-08-10,2026-08-14,NOT_STARTED,DC017,Release nội bộ,Có,,Mục tiêu không phải kết quả đã có
+DC022,Phát hành dataset-v1.0,Tối thiểu 1500 ảnh đã kiểm tra và test khóa,SV1,SV5,HIGH,2026-08-24,2026-10-09,NOT_STARTED,DC018;DC019;DC020,Release nội bộ,Có,,Chỉ DONE khi đủ acceptance criteria
+

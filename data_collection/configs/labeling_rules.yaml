@@ -1,0 +1,17 @@
+classes:
+  - id: 0
+    name: vehicle
+format: yolo
+box_policy:
+  tight_box: true
+  annotate_all_visible_vehicles: true
+  partially_cut_vehicle: "annotate_if_recognizable"
+  too_small_or_uncertain: "REVIEW"
+  out_of_bounds_allowed: false
+negative_samples:
+  keep_images_without_vehicle: true
+cross_review:
+  minimum_percent: 10
+  maximum_percent: 20
+class_change_requires_team_approval: true
+

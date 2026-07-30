@@ -1,0 +1,10 @@
+lighting: [day, night, backlight, headlight]
+weather: [clear, rain, wet_road]
+distance: [near, medium, far]
+vehicle_state: [none, moving, slow, stopped, leaving]
+required_test_conditions: [day, night, rain, backlight, near, far, negative]
+safety:
+  real_emergency_lane_staging_allowed: false
+  teacher_approval_required: true
+  privacy_blur_for_publication: true
+

@@ -1,0 +1,9 @@
+source_id,source_type,source_name,source_url_or_path,provider,country,capture_device,camera_view,data_format,license,permission_required,permission_status,allowed_for_training,allowed_for_publication,allowed_for_redistribution,date_accessed,collected_by,intended_usage,risk_level,notes
+SRC001,K230_SELF_RECORDED,Camera K230 tự quay tại trường,,UMT,VN,K230,Demo view,video,UNVERIFIED,YES,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Nguồn chính,MEDIUM,Chưa quay và chưa xác minh quyền
+SRC002,DASHCAM_SELF_RECORDED,Dashcam do nhóm tự quay,,UMT,VN,UNVERIFIED,Dashcam,video,UNVERIFIED,YES,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Bổ sung,MEDIUM,Chưa quay
+SRC003,OPEN_DATASET,Dataset mở,,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Bổ sung,HIGH,Phải xác minh license
+SRC004,INTERNET_VIDEO,Video Internet có giấy phép rõ ràng,,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,video,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Bổ sung,HIGH,Chỉ đổi trạng thái sau khi có evidence
+SRC005,INTERNET_VIDEO,Video Internet chưa xác định bản quyền,,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,video,UNVERIFIED,YES,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Chờ kiểm tra,HIGH,Không dùng hoặc công bố khi chưa xác minh
+SRC006,SCALE_MODEL,Dữ liệu mô hình sa bàn,,UMT,VN,UNVERIFIED,Scale model,video/image,UNVERIFIED,YES,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Bổ sung,MEDIUM,Chưa thu
+SRC007,BKU_HANDOVER,Dữ liệu bàn giao từ BKU,,BKU,VN,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,YES,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,SV1,Chờ bàn giao,HIGH,Cần dataset script và phạm vi quyền
+

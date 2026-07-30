@@ -1,0 +1,6 @@
+allowed_download_status: APPROVED
+required_license_verified: "TRUE"
+allowed_permission_status: [APPROVED, NOT_REQUIRED]
+block_if_redistribution_unknown: true
+require_official_direct_download: true
+unknown_value: UNVERIFIED

@@ -1,0 +1,8 @@
+default_fps: 1.0
+slow_motion_fps: 0.5
+high_change_fps: 2.0
+near_duplicate_hamming_threshold: 8
+frame_format: jpg
+required_video_status: APPROVED
+split_unit: video_id
+overwrite_existing: false

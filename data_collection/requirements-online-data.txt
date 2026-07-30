@@ -1,0 +1,4 @@
+# Tùy chọn: Pillow được dùng cho contact sheet và perceptual hash; đã có trong runtime Codex.
+# ffmpeg/ffprobe là công cụ hệ thống tùy chọn để inspect/normalize video.
+Pillow>=10.0
+pytest>=8.0

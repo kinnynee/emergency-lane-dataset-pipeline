@@ -1,0 +1,10 @@
+preferred_container: mp4
+preferred_codec: h264
+preferred_resolution: "1920x1080"
+minimum_resolution: "1280x720"
+preferred_fps: [25, 30]
+minimum_fps: 15
+accepted_camera_types: [FIXED_SURVEILLANCE, DASHCAM, K230_FIXED, AERIAL, HANDHELD, UNKNOWN]
+priority_camera_types: [FIXED_SURVEILLANCE, K230_FIXED]
+manual_review_value: NEEDS_MANUAL_REVIEW
+reject_if: [unknown_source, unknown_license, unreadable, low_quality, static_image, duplicate, unrelated_view, unmanageable_privacy, prohibited_watermark]

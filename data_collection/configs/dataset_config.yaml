@@ -1,0 +1,15 @@
+project_name: "canh_bao_lan_dung_khan_cap_k230"
+dataset_version: "dataset-v0.1"
+class_names: ["vehicle"]
+target_total_images: 1500
+target_train_images: 1000
+target_val_images: 200
+target_test_images: 300
+primary_source: "K230_SELF_RECORDED"
+split_unit: "session_id"
+test_locked: true
+storage_root: "../external_storage/dataset"
+metadata_root: "metadata"
+created_by: "TODO"
+status: "NOT_STARTED"
+

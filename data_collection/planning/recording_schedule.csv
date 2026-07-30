@@ -1,0 +1,3 @@
+schedule_id,session_id,planned_date,start_time,end_time,location_id,scenario_ids,owner,supporter,permission_status,equipment_status,status,evidence_link,notes
+SCH001,,2026-08-03,,,LOC001,,SV1,SV3,UNVERIFIED,UNVERIFIED,NOT_STARTED,,Lịch mẫu cần xác nhận thực tế
+
