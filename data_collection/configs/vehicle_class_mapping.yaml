@@ -1,0 +1,93 @@
+mapping_version: "1.0"
+review_status: "PENDING_DATA_LEAD_APPROVAL"
+preserve_original_class: true
+
+mio_tcd:
+  articulated_truck:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  bicycle:
+    mapped_class: null
+    include: null
+    review_required: true
+  bus:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  car:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  motorcycle:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  motorized_vehicle:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  non-motorized_vehicle:
+    mapped_class: null
+    include: null
+    review_required: true
+  pedestrian:
+    mapped_class: null
+    include: false
+    review_required: true
+  pickup_truck:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  single_unit_truck:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  work_van:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+
+aau_rainsnow:
+  bicycle:
+    mapped_class: null
+    include: null
+    review_required: true
+  bus:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  car:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  motorbike:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  truck:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  person:
+    mapped_class: null
+    include: false
+    review_required: true
+
+ua_detrac:
+  bus:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  car:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  others:
+    mapped_class: vehicle
+    include: null
+    review_required: true
+  van:
+    mapped_class: vehicle
+    include: null
+    review_required: true

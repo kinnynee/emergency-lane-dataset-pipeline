@@ -47,4 +47,7 @@ storage_placeholders/online_data/contact_sheets/*
 !storage_placeholders/online_data/contact_sheets/.gitkeep
 storage_placeholders/online_data/quarantine/*
 !storage_placeholders/online_data/quarantine/.gitkeep
+reports/external_eda/cache/
+reports/external_eda/*.log
+!reports/external_eda/figures/*.png
 cookies.txt

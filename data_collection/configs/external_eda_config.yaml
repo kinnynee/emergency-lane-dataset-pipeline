@@ -1,0 +1,59 @@
+eda_version: "1.0"
+analysis_date: "2026-07-31"
+input_size: 320
+default_sample_size: 5000
+random_seed: 230
+image_batch_size: 32
+default_workers: 4
+resume_checkpoint_interval: 100
+allowed_datasets:
+  - MIO-TCD Localization
+  - AAU RainSnow
+  - UA-DETRAC Original
+excluded_datasets:
+  RADIATE:
+    status: EXCLUDED_VIEWPOINT_MISMATCH
+    reason: "Góc camera phía trước phương tiện không phù hợp với camera cố định trên cao của dự án."
+mio:
+  include_name_pattern: "MIO-TCD-Localization"
+  exclude_name_patterns:
+    - "MIO-TCD-Classification"
+    - "classification"
+aau:
+  canonical_tree_rule: "Không xử lý nhánh aaurainsnow/ lặp nếu cùng file đã có ở root."
+  frame_proposal_rate_fps:
+    minimum: 0.2
+    maximum: 1.0
+ua_detrac:
+  kaggle_download_url: "https://www.kaggle.com/datasets/bratjay/ua-detrac-orig"
+  original_dataset_name: "UA-DETRAC"
+  stationary_candidate:
+    minimum_track_frames: 15
+    high_max_center_displacement_ratio: 0.005
+    medium_max_center_displacement_ratio: 0.015
+quality_thresholds:
+  dark_pixel_value: 25
+  bright_pixel_value: 240
+  underexposed_mean: 45
+  overexposed_mean: 220
+  black_image_mean: 5
+  white_image_mean: 250
+  blur_laplacian_variance: 60
+bbox_320_categories:
+  extremely_tiny_max_exclusive: 4
+  very_small_max_exclusive: 8
+  small_max_exclusive: 16
+subset_targets:
+  PILOT_500: 500
+  DATASET_V1_1500: 1500
+  EXTENDED: 3000
+split_policy:
+  unit_priority:
+    - sequence_id
+    - video_id
+    - camera_id
+    - source_id
+  external_train_ratio: 0.75
+  external_validation_ratio: 0.15
+  cross_dataset_test_ratio: 0.10
+  main_test_source: "K230_SELF_RECORDED"

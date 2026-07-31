@@ -1,0 +1,924 @@
+"""Chạy EDA thật cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import traceback
+from collections import Counter, defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+from analyze_viewpoint_suitability import assess_viewpoints
+from create_balanced_subset_plan import create_plan
+from create_external_contact_sheets import create_contact_sheet
+from detect_external_duplicates import detect_duplicates
+from detect_sequence_leakage import assert_sequence_split, detect_leakage
+from discover_external_datasets import discover
+from external_eda_common import DEFAULT_OUTPUT, ROOT, git_commit, load_yaml, read_csv, write_csv
+from inspect_aau_rainsnow import inspect_aau
+from inspect_mio_tcd import inspect_mio
+from inspect_ua_detrac import inspect_ua_detrac
+
+VERSION_DATE = "2026-07-31"
+
+INVENTORY_FIELDS = [
+    "dataset_name", "version_or_download_date", "source_path", "status", "data_type",
+    "image_count", "video_count", "sequence_count", "annotation_status",
+    "annotation_file_count", "annotation_row_count", "bbox_count", "bbox_analyzed_count",
+    "track_count", "class_count", "images_without_boxes", "invalid_annotation_count",
+    "invalid_issue_count", "files_processed_successfully", "files_failed", "analysis_scope",
+    "elapsed_seconds", "git_commit",
+]
+INVALID_FIELDS = [
+    "dataset_name", "sequence_name", "source_file", "annotation_id", "issue_type",
+    "severity", "details", "recommended_action",
+]
+QUALITY_SAMPLE_FIELDS = [
+    "dataset_name", "sequence_name", "source_file", "split", "read_status", "width",
+    "height", "aspect_ratio", "file_size_bytes", "mean_brightness", "brightness_std",
+    "contrast", "laplacian_variance", "blur_score", "dark_pixel_ratio",
+    "bright_pixel_ratio", "mean_saturation", "black_suspect", "white_suspect",
+    "underexposed_suspect", "overexposed_suspect", "blur_suspect", "assessment_source",
+]
+BBOX_SAMPLE_FIELDS = [
+    "dataset_name", "sequence_name", "source_file", "original_class", "mapped_class",
+    "box_width", "box_height", "box_area_ratio", "bbox_size_category", "distance",
+    "box_width_320", "box_height_320", "box_area_320", "box_320_category",
+    "occluded", "truncation_ratio",
+]
+VIEWPOINT_FIELDS = [
+    "dataset_name", "sequence_name", "camera_motion", "camera_height_estimate",
+    "view_direction", "pitch_category", "road_area_visibility",
+    "vehicle_scale_similarity", "fixed_camera_similarity", "emergency_lane_similarity",
+    "night_suitability", "rain_suitability", "overall_score", "relevance_level",
+    "assessment_source", "manual_review_status", "notes",
+]
+DUPLICATE_FIELDS = [
+    "duplicate_group_id", "dataset_name", "sequence_name", "file_path", "duplicate_type",
+    "similarity_score", "recommended_keep", "recommended_action", "review_status",
+]
+LEAKAGE_FIELDS = [
+    "dataset_name", "sequence_name", "leakage_type", "splits", "severity", "evidence",
+    "recommended_action", "review_status",
+]
+MANIFEST_FIELDS = [
+    "selection_id", "dataset_name", "sequence_id", "source_file", "annotation_file",
+    "original_class", "mapped_class", "lighting", "weather", "distance",
+    "bbox_size_category", "camera_view", "selection_reason", "target_subset", "selected",
+    "manual_review_status", "notes",
+]
+
+
+def _ratio(numerator: int, denominator: int) -> float | str:
+    return round(numerator / denominator, 8) if denominator else ""
+
+
+def _save_cache(path: Path, result: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_cache(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _summary_numeric(rows: list[dict[str, Any]], field: str) -> dict[str, Any]:
+    values = [float(row[field]) for row in rows if row.get(field) not in ("", None)]
+    if not values:
+        return {"count": 0, "min": "", "mean": "", "median": "", "max": ""}
+    array = np.asarray(values, dtype=np.float64)
+    return {
+        "count": len(values),
+        "min": round(float(array.min()), 6),
+        "mean": round(float(array.mean()), 6),
+        "median": round(float(np.median(array)), 6),
+        "max": round(float(array.max()), 6),
+    }
+
+
+def _inventory(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    commit = git_commit()
+    rows = []
+    for result in results:
+        invalid_rows = result.get("invalid_annotations", [])
+        unique_invalid = {
+            (str(row.get("source_file", "")), str(row.get("annotation_id", "")))
+            for row in invalid_rows
+        }
+        rows.append(
+            {
+                "dataset_name": result["dataset_name"],
+                "version_or_download_date": VERSION_DATE,
+                "source_path": result.get("path", ""),
+                "status": result.get("status", "UNKNOWN"),
+                "data_type": result.get("data_type", ""),
+                "image_count": result.get("image_count", 0),
+                "video_count": result.get("video_count", 0),
+                "sequence_count": result.get("sequence_count", 0),
+                "annotation_status": result.get("annotation_status", ""),
+                "annotation_file_count": result.get("annotation_file_count", 0),
+                "annotation_row_count": result.get("annotation_row_count", 0),
+                "bbox_count": result.get("bbox_count", 0),
+                "bbox_analyzed_count": result.get("bbox_analyzed_count", 0),
+                "track_count": result.get("track_count", 0),
+                "class_count": len(result.get("class_counts", {})),
+                "images_without_boxes": result.get("images_without_boxes", 0),
+                "invalid_annotation_count": len(unique_invalid),
+                "invalid_issue_count": len(invalid_rows),
+                "files_processed_successfully": result.get("files_processed_successfully", 0),
+                "files_failed": result.get("files_failed", 0),
+                "analysis_scope": result.get("analysis_scope", ""),
+                "elapsed_seconds": result.get("elapsed_seconds", 0),
+                "git_commit": commit,
+            }
+        )
+    return rows
+
+
+def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[dict[str, Any]]:
+    keys = {
+        "MIO-TCD Localization": "mio_tcd",
+        "AAU RainSnow": "aau_rainsnow",
+        "UA-DETRAC Original": "ua_detrac",
+    }
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        mapping_rows = mapping.get(keys[result["dataset_name"]], {})
+        for original_class, count in sorted(result.get("class_counts", {}).items()):
+            rule = mapping_rows.get(original_class, {})
+            rows.append(
+                {
+                    "dataset_name": result["dataset_name"],
+                    "original_class": original_class,
+                    "count": count,
+                    "mapped_class": rule.get("mapped_class", ""),
+                    "include_for_training": rule.get("include", ""),
+                    "reason": "MAPPING_PENDING_DATA_LEAD_APPROVAL",
+                    "manual_review_required": rule.get("review_required", True),
+                    "mapping_status": "DEFINED" if original_class in mapping_rows else "UNMAPPED",
+                }
+            )
+    return rows
+
+
+def _annotation_quality(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    for result in results:
+        checked = int(result.get("bbox_analyzed_count", 0))
+        invalid_rows = result.get("invalid_annotations", [])
+        invalid = len(
+            {
+                (str(row.get("source_file", "")), str(row.get("annotation_id", "")))
+                for row in invalid_rows
+            }
+        )
+        valid = int(result.get("valid_bbox_count", checked))
+        rows.append(
+            {
+                "dataset_name": result["dataset_name"],
+                "version_or_download_date": VERSION_DATE,
+                "annotation_status": result.get("annotation_status", ""),
+                "annotation_files_checked": result.get("annotation_file_count", 0),
+                "annotations_reported": result.get("annotation_row_count", 0),
+                "bounding_boxes_checked": checked,
+                "valid_bounding_boxes": valid,
+                "invalid_annotations_unique": invalid,
+                "invalid_issue_count": len(invalid_rows),
+                "invalid_annotation_rate": _ratio(invalid, valid + invalid),
+                "images_without_boxes": result.get("images_without_boxes", 0),
+                "annotation_without_image": result.get("annotation_without_image", 0),
+                "assessment_source": "SOURCE_ANNOTATION_SCAN",
+                "notes": "Một annotation có thể sinh nhiều issue; unique và issue được tách riêng.",
+            }
+        )
+    return rows
+
+
+def _image_quality(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    samples = [row for result in results for row in result.get("quality_rows", [])]
+    summaries: list[dict[str, Any]] = []
+    for result in results:
+        rows = [row for row in result.get("quality_rows", []) if row.get("read_status") == "OK"]
+        brightness = _summary_numeric(rows, "mean_brightness")
+        contrast = _summary_numeric(rows, "contrast")
+        blur = _summary_numeric(rows, "blur_score")
+        size = _summary_numeric(rows, "file_size_bytes")
+        summaries.append(
+            {
+                "dataset_name": result["dataset_name"],
+                "version_or_download_date": VERSION_DATE,
+                "sample_images_checked": len(rows),
+                "images_failed": sum(row.get("read_status") != "OK" for row in result.get("quality_rows", [])),
+                "brightness_mean": brightness["mean"],
+                "brightness_median": brightness["median"],
+                "contrast_mean": contrast["mean"],
+                "blur_score_mean": blur["mean"],
+                "blur_score_median": blur["median"],
+                "file_size_mean_bytes": size["mean"],
+                "underexposed_suspects": sum(bool(row.get("underexposed_suspect")) for row in rows),
+                "overexposed_suspects": sum(bool(row.get("overexposed_suspect")) for row in rows),
+                "blur_suspects": sum(bool(row.get("blur_suspect")) for row in rows),
+                "assessment_source": "AUTOMATIC_ESTIMATE",
+                "analysis_scope": result.get("analysis_scope", ""),
+            }
+        )
+    return summaries, samples
+
+
+def _bbox_statistics(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    summaries: list[dict[str, Any]] = []
+    samples = [row for result in results for row in result.get("bbox_samples", [])]
+    for result in results:
+        counts = Counter(result.get("bbox_320_counts", {}))
+        analyzed = int(result.get("bbox_analyzed_count", 0))
+        difficult = counts["EXTREMELY_TINY"] + counts["VERY_SMALL"]
+        rows = result.get("bbox_samples", [])
+        area = _summary_numeric(rows, "box_area_ratio")
+        width_320 = _summary_numeric(rows, "box_width_320")
+        height_320 = _summary_numeric(rows, "box_height_320")
+        summaries.append(
+            {
+                "dataset_name": result["dataset_name"],
+                "version_or_download_date": VERSION_DATE,
+                "bbox_reported": result.get("bbox_count", 0),
+                "bbox_analyzed": analyzed,
+                "extremely_tiny_count": counts["EXTREMELY_TINY"],
+                "very_small_count": counts["VERY_SMALL"],
+                "small_count": counts["SMALL"],
+                "usable_count": counts["USABLE"],
+                "not_computed_count": counts["NOT_COMPUTED"],
+                "extremely_tiny_ratio": _ratio(counts["EXTREMELY_TINY"], analyzed),
+                "very_small_ratio": _ratio(counts["VERY_SMALL"], analyzed),
+                "difficult_under_8px_ratio": _ratio(difficult, analyzed),
+                "box_area_ratio_mean": area["mean"],
+                "box_width_320_mean": width_320["mean"],
+                "box_height_320_mean": height_320["mean"],
+                "threshold_source": "INITIAL_ANALYSIS_THRESHOLDS_FROM_PROJECT_PROMPT",
+            }
+        )
+    return summaries, samples
+
+
+def _comparison(
+    results: list[dict[str, Any]],
+    bbox_stats: list[dict[str, Any]],
+    annotation_quality: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    bbox_by_name = {row["dataset_name"]: row for row in bbox_stats}
+    quality_by_name = {row["dataset_name"]: row for row in annotation_quality}
+    rows = []
+    for result in results:
+        name = result["dataset_name"]
+        classes = set(result.get("class_counts", {}))
+        conditions = result.get("conditions", [])
+        condition_values = " ".join(str(row.get("value", "")).lower() for row in conditions)
+        rows.append(
+            {
+                "dataset_name": name,
+                "data_type": result.get("data_type", ""),
+                "image_count": result.get("image_count", 0),
+                "video_count": result.get("video_count", 0),
+                "sequence_count": result.get("sequence_count", 0),
+                "has_bounding_box": result.get("bbox_count", 0) > 0,
+                "has_track_id": result.get("track_count", 0) > 0,
+                "has_weather_label": "FROM_XML_METADATA" if name == "UA-DETRAC Original" else "DATASET_LEVEL_OR_NOT_SEPARATED" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_day": "AUTOMATIC_ESTIMATE" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_night": "AUTOMATIC_ESTIMATE" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_rain": "DATASET_LEVEL" if name == "AAU RainSnow" else ("TRUE" if "rainy" in condition_values else "NOT_VERIFIED"),
+                "has_snow": "DATASET_LEVEL_NOT_SEPARATED" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_wet_road": "MANUAL_REVIEW_REQUIRED",
+                "has_headlight": "MANUAL_REVIEW_REQUIRED",
+                "fixed_camera": "TRUE_OR_HIGH_SIMILARITY",
+                "elevated_view": "AUTOMATIC_ESTIMATE_REVIEW_REQUIRED",
+                "has_motorcycle": bool(classes & {"motorcycle", "motorbike"}),
+                "has_car": "car" in classes,
+                "has_truck": bool(classes & {"truck", "articulated_truck", "single_unit_truck", "pickup_truck"}),
+                "has_bus": "bus" in classes,
+                "has_negative_sample": result.get("images_without_boxes", 0) > 0,
+                "small_box_ratio": _ratio(
+                    int(result.get("bbox_320_counts", {}).get("SMALL", 0)),
+                    int(result.get("bbox_analyzed_count", 0)),
+                ),
+                "very_small_after_320_ratio": bbox_by_name[name].get("difficult_under_8px_ratio", ""),
+                "annotation_quality": f"invalid_unique={quality_by_name[name]['invalid_annotations_unique']};issues={quality_by_name[name]['invalid_issue_count']}",
+                "duplicate_risk": "TEMPORAL_HIGH" if name != "MIO-TCD Localization" else "SAMPLE_CHECK_REQUIRED",
+                "train_suitability": "HIGH_WITH_BALANCED_SUBSET",
+                "validation_suitability": "SEQUENCE_LEVEL_ONLY",
+                "cross_domain_test_suitability": "YES_SEPARATE_SEQUENCES",
+                "main_test_suitability": "NO_K230_MUST_BE_PRIMARY",
+                "limitations": "Không có ground-truth xe dừng; điều kiện/góc cần review thủ công.",
+                "recommendation": "Dùng train/validation/external test; không thay thế main K230 test.",
+            }
+        )
+    return rows
+
+
+def _gap_rows() -> list[dict[str, Any]]:
+    conditions = [
+        "K230 góc cao", "Xe trong làn dừng khẩn cấp", "Xe đang chạy", "Xe chạy chậm",
+        "Xe dừng", "Xe dừng từ 2–3 giây", "Xe dừng trên 5 giây", "Xe rời khỏi ROI",
+        "Ban ngày", "Ban đêm", "Mưa", "Đường ướt", "Ngược sáng", "Đèn pha",
+        "Xe máy", "Ô tô", "Xe tải", "Xe khách", "Xe gần", "Xe xa", "Một xe",
+        "Nhiều xe", "Không có xe", "Camera rung", "Bóng cây", "Biển báo",
+        "Vật thể gây nhiễu",
+    ]
+    rows = []
+    stationary = {
+        "Xe dừng", "Xe dừng từ 2–3 giây", "Xe dừng trên 5 giây", "Xe rời khỏi ROI",
+        "Xe trong làn dừng khẩn cấp",
+    }
+    for condition in conditions:
+        if condition in stationary:
+            mio = aau = ua = "NOT_VERIFIED"
+            status = "NOT_VERIFIED"
+            gap = "CRITICAL"
+            evidence = "Không có ground-truth trạng thái dừng/ROI."
+            action = "Thu và gán nhãn sequence K230 có ROI/tracking."
+        elif condition in {"Mưa", "Đường ướt", "Ban đêm", "Đèn pha"}:
+            mio = "NOT_VERIFIED"
+            aau = "DATASET_LEVEL_OR_AUTOMATIC_ESTIMATE"
+            ua = "PARTIAL" if condition == "Mưa" else "NOT_VERIFIED"
+            status = "PARTIAL"
+            gap = "HIGH"
+            evidence = "AAU dataset identity/video estimate; UA XML weather cho mưa."
+            action = "Review thủ công và bổ sung K230 cùng điều kiện."
+        elif condition == "Xe máy":
+            mio = "CLASS_PRESENT"
+            aau = "CLASS_PRESENT"
+            ua = "CLASS_NOT_OBSERVED_IN_XML"
+            status = "PARTIAL"
+            gap = "MEDIUM"
+            evidence = "Class distribution từ annotation."
+            action = "Giữ xe máy MIO/AAU và quay thêm K230."
+        else:
+            mio = "PARTIAL_OR_NOT_VERIFIED"
+            aau = "PARTIAL_OR_NOT_VERIFIED"
+            ua = "PARTIAL_OR_NOT_VERIFIED"
+            status = "PARTIAL"
+            gap = "MEDIUM"
+            evidence = "BBox/sequence có thể hỗ trợ nhưng chưa chứng minh điều kiện cụ thể."
+            action = "Manual review contact sheet và thu K230."
+        rows.append(
+            {
+                "condition": condition,
+                "mio_tcd_coverage": mio,
+                "aau_rainsnow_coverage": aau,
+                "ua_detrac_coverage": ua,
+                "k230_required": True,
+                "coverage_status": status,
+                "evidence": evidence,
+                "gap_level": gap,
+                "recommended_action": action,
+                "notes": "BBox phương tiện không phải bằng chứng xe đang dừng.",
+            }
+        )
+    return rows
+
+
+def _plot_no_data(title: str, path: Path, message: str = "CHƯA CÓ DỮ LIỆU XÁC MINH") -> None:
+    figure = plt.figure(figsize=(8, 5))
+    plt.text(0.5, 0.5, message, ha="center", va="center")
+    plt.axis("off")
+    plt.title(f"{title}\nDataset version: {VERSION_DATE}")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def _bar(title: str, ylabel: str, labels: list[str], values: list[float], path: Path) -> None:
+    if not labels:
+        _plot_no_data(title, path)
+        return
+    figure = plt.figure(figsize=(9, 5))
+    plt.bar(labels, values)
+    plt.title(f"{title}\nDataset version: {VERSION_DATE}")
+    plt.xlabel("Nhóm")
+    plt.ylabel(ylabel)
+    plt.xticks(rotation=25, ha="right")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def _hist(title: str, xlabel: str, values: list[float], path: Path) -> None:
+    if not values:
+        _plot_no_data(title, path)
+        return
+    figure = plt.figure(figsize=(8, 5))
+    plt.hist(values, bins=40)
+    plt.title(f"{title}\nDataset version: {VERSION_DATE}")
+    plt.xlabel(xlabel)
+    plt.ylabel("Tần suất")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def _hbar(title: str, xlabel: str, labels: list[str], values: list[float], path: Path) -> None:
+    if not labels:
+        _plot_no_data(title, path)
+        return
+    height = max(6.0, min(12.0, 0.38 * len(labels) + 2.5))
+    figure = plt.figure(figsize=(10, height))
+    positions = np.arange(len(labels))
+    plt.barh(positions, values)
+    plt.yticks(positions, labels, fontsize=8)
+    plt.gca().invert_yaxis()
+    plt.title(f"{title}\nDataset version: {VERSION_DATE}")
+    plt.xlabel(xlabel)
+    plt.ylabel("Class gốc")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def _figures(
+    output: Path,
+    inventory: list[dict[str, Any]],
+    class_rows: list[dict[str, Any]],
+    quality_samples: list[dict[str, Any]],
+    bbox_samples: list[dict[str, Any]],
+    bbox_stats: list[dict[str, Any]],
+    conditions: list[dict[str, Any]],
+    viewpoints: list[dict[str, Any]],
+    plans: list[dict[str, Any]],
+    gaps: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+) -> list[Path]:
+    figures = output / "figures"
+    figures.mkdir(parents=True, exist_ok=True)
+    names = [row["dataset_name"] for row in inventory]
+    created: list[Path] = []
+
+    def destination(number: int, slug: str) -> Path:
+        path = figures / f"{number:02d}_{slug}.png"
+        created.append(path)
+        return path
+
+    _bar("Số ảnh theo dataset", "Số ảnh", names, [float(row["image_count"]) for row in inventory], destination(1, "images_by_dataset"))
+    _bar("Số video/sequence theo dataset", "Số video + sequence", names, [float(row["video_count"]) + float(row["sequence_count"]) for row in inventory], destination(2, "videos_sequences_by_dataset"))
+    _bar("Số bounding box theo dataset", "Số box", names, [float(row["bbox_count"]) for row in inventory], destination(3, "bboxes_by_dataset"))
+    original_labels = [f"{row['dataset_name'][:8]}:{row['original_class']}" for row in class_rows]
+    _hbar("Phân bố class gốc", "Số annotation", original_labels, [float(row["count"]) for row in class_rows], destination(4, "original_class_distribution"))
+    mapped = Counter()
+    for row in class_rows:
+        mapped[str(row.get("mapped_class") or "EXCLUDED_OR_PENDING")] += int(row["count"])
+    _bar("Phân bố class sau ánh xạ proposal", "Số annotation", list(mapped), list(mapped.values()), destination(5, "mapped_class_distribution"))
+    lighting = [row for row in conditions if row.get("condition") == "lighting"]
+    _bar("Phân bố ngày/đêm tự động", "Số đơn vị", [str(row["value"]) for row in lighting], [float(row["count"]) for row in lighting], destination(6, "lighting_distribution"))
+    weather = [row for row in conditions if row.get("condition") == "weather"]
+    _bar("Phân bố điều kiện thời tiết", "Số đơn vị", [f"{row['dataset_name'][:8]}:{row['value']}" for row in weather], [float(row["count"]) for row in weather], destination(7, "weather_distribution"))
+    _hist("Phân bố độ sáng", "Mean brightness (0-255)", [float(row["mean_brightness"]) for row in quality_samples if row.get("mean_brightness") not in ("", None)], destination(8, "brightness_distribution"))
+    _hist("Phân bố blur score", "Variance of Laplacian", [float(row["blur_score"]) for row in quality_samples if row.get("blur_score") not in ("", None)], destination(9, "blur_distribution"))
+    resolution_counts = Counter(f"{row.get('width')}x{row.get('height')}" for row in quality_samples if row.get("width"))
+    _bar("Phân bố độ phân giải", "Số ảnh mẫu", list(resolution_counts), list(resolution_counts.values()), destination(10, "resolution_distribution"))
+    _hist("Phân bố box area ratio", "Box area / image area", [float(row["box_area_ratio"]) for row in bbox_samples if row.get("box_area_ratio") not in ("", None)], destination(11, "bbox_area_ratio"))
+    _hist("Phân bố box width sau letterbox 320", "Pixel", [float(row["box_width_320"]) for row in bbox_samples if row.get("box_width_320") not in ("", None)], destination(12, "bbox_width_320"))
+    _hist("Phân bố box height sau letterbox 320", "Pixel", [float(row["box_height_320"]) for row in bbox_samples if row.get("box_height_320") not in ("", None)], destination(13, "bbox_height_320"))
+    categories = ["EXTREMELY_TINY", "VERY_SMALL", "SMALL", "USABLE"]
+    category_counts = Counter(row.get("box_320_category", "") for row in bbox_samples)
+    _bar("Tỷ lệ tiny/small/usable box trong mẫu", "Số box", categories, [category_counts[key] for key in categories], destination(14, "bbox_320_categories"))
+    all_counts = [int(value) for result in results for value in result.get("boxes_per_image", {}).values()]
+    _hist("Số box mỗi ảnh/frame", "Số box", [float(value) for value in all_counts], destination(15, "boxes_per_image"))
+    ua = next((result for result in results if result["dataset_name"] == "UA-DETRAC Original"), {})
+    _bar("Occlusion UA-DETRAC", "Số box", ["Occluded", "Not marked occluded"], [float(ua.get("occluded_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("occluded_bbox_count", 0)))], destination(16, "ua_occlusion"))
+    _bar("Truncation UA-DETRAC", "Số box", ["Truncated", "Not truncated"], [float(ua.get("truncated_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("truncated_bbox_count", 0)))], destination(17, "ua_truncation"))
+    vp = defaultdict(list)
+    for row in viewpoints:
+        if row["dataset_name"] != "RADIATE":
+            vp[row["dataset_name"]].append(float(row["overall_score"]))
+    _bar("Điểm phù hợp góc camera", "Điểm trung bình (1-5)", list(vp), [sum(values) / len(values) for values in vp.values()], destination(18, "viewpoint_score"))
+    pilot = [row for row in plans if row["scenario"] == "PILOT_500"]
+    _bar("Số ảnh đề xuất chọn — PILOT_500", "Số ảnh proposal", [row["dataset_name"] for row in pilot], [float(row["proposed_images"]) for row in pilot], destination(19, "selection_ratio"))
+    gap_counts = Counter(row["gap_level"] for row in gaps)
+    _bar("Khoảng trống dữ liệu theo mức", "Số điều kiện", list(gap_counts), list(gap_counts.values()), destination(20, "data_gaps"))
+    return created
+
+
+def _write_reports(
+    output: Path,
+    inventory: list[dict[str, Any]],
+    bbox_stats: list[dict[str, Any]],
+    viewpoints: list[dict[str, Any]],
+    duplicates: list[dict[str, Any]],
+    leakage: list[dict[str, Any]],
+    plans: list[dict[str, Any]],
+    figures: list[Path],
+    results: list[dict[str, Any]],
+) -> None:
+    total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
+    total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
+    total_boxes_checked = sum(int(result.get("bbox_analyzed_count", 0)) for result in results)
+    total_invalid = sum(
+        len(
+            {
+                (str(row.get("source_file", "")), str(row.get("annotation_id", "")))
+                for row in result.get("invalid_annotations", [])
+            }
+        )
+        for result in results
+    )
+    total_issues = sum(len(result.get("invalid_annotations", [])) for result in results)
+    duplicate_groups = len({row["duplicate_group_id"] for row in duplicates})
+    critical_leakage = sum(row.get("severity") == "CRITICAL" for row in leakage)
+    most_relevant = max(
+        (
+            (name, sum(float(row["overall_score"]) for row in viewpoints if row["dataset_name"] == name) /
+             sum(1 for row in viewpoints if row["dataset_name"] == name))
+            for name in {row["dataset_name"] for row in viewpoints if row["dataset_name"] != "RADIATE"}
+        ),
+        key=lambda item: item[1],
+    )
+    tiny_rates = {
+        row["dataset_name"]: row.get("difficult_under_8px_ratio", "") for row in bbox_stats
+    }
+    executive = f"""# Executive summary — External Dataset EDA
+
+- Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- Dataset: MIO-TCD Localization, AAU RainSnow, UA-DETRAC Original.
+- RADIATE: `EXCLUDED_VIEWPOINT_MISMATCH`, không chạy EDA.
+- Ảnh/frame kiểm tra chất lượng thật: **{total_images_checked:,}**.
+- Annotation rows đọc: **{total_annotations:,}**.
+- Bounding box kiểm tra/phân tích: **{total_boxes_checked:,}**.
+- Annotation lỗi duy nhất: **{total_invalid:,}**; tổng issue: **{total_issues:,}**.
+- Nhóm trùng/nghi gần trùng trên mẫu: **{duplicate_groups:,}**.
+- Leakage mức CRITICAL: **{critical_leakage:,}**.
+- Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
+
+Không dataset nào có ground-truth “xe dừng trong làn khẩn cấp”. UA-DETRAC chỉ tạo `STATIONARY_CANDIDATE` từ track để con người review; không dùng làm nhãn train. Main test bắt buộc ưu tiên K230 tự quay.
+"""
+    (output / "executive_summary.md").write_text(executive, encoding="utf-8")
+    findings = f"""# Research findings — EDA ba dataset bên ngoài
+
+## 1. Mục tiêu EDA
+
+Đánh giá dữ liệu bổ sung cho YOLOv8n 320×320 và camera K230 cố định trên cao, không thay thế test thực địa K230.
+
+## 2. Mô tả dataset
+
+{chr(10).join(f"- **{row['dataset_name']}**: {int(row['image_count']):,} ảnh/modality image, {int(row['video_count']):,} video, {int(row['sequence_count']):,} sequence, {int(row['bbox_count']):,} bbox reported." for row in inventory)}
+
+## 3. Lý do không sử dụng RADIATE
+
+`EXCLUDED_VIEWPOINT_MISMATCH`: camera phía trước phương tiện khác camera cố định trên cao. Dữ liệu không bị xóa.
+
+## 4. Quy trình
+
+Inventory archive, parse annotation gốc, validation bbox, image-quality sample streaming, letterbox 320, duplicate sample, leakage theo sequence, viewpoint estimate và subset proposal. Không copy/xóa dữ liệu gốc.
+
+## 5. MIO-TCD Localization
+
+Chỉ đọc TAR Localization; Classification bị chặn. MIO cung cấp localization ảnh tĩnh, không có Track ID và không chứng minh trạng thái dừng.
+
+## 6. AAU RainSnow
+
+Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video RGB/thermal và COCO instance annotation; mưa/tuyết cụ thể theo sequence cần review vì metadata hiện có không tách rõ.
+
+## 7. UA-DETRAC
+
+Đọc toàn bộ XML train/test, Track ID, weather, camera state, occlusion/truncation. Stationary candidate là heuristic và luôn `manual_review_status=PENDING`.
+
+## 8–10. Góc camera, điều kiện và class
+
+Viewpoint cao nhất theo rule hiện tại: **{most_relevant[0]} {most_relevant[1]:.2f}/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
+
+## 11–12. Bounding box và resize 320×320
+
+Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, rate in tiny_rates.items())}. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.
+
+## 13–15. Chất lượng ảnh, annotation, trùng và leakage
+
+Đã kiểm tra {total_images_checked:,} ảnh/frame mẫu; ghi {total_invalid:,} annotation lỗi duy nhất ({total_issues:,} issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện {critical_leakage:,} leakage CRITICAL theo sequence metadata.
+
+## 16–17. Vehicle detection và giới hạn xe dừng
+
+Ba bộ hỗ trợ nhận diện phương tiện. Không bộ nào có ground-truth xe dừng trong ROI. Không được kết luận xe dừng từ một ảnh.
+
+## 18. Khoảng trống so với K230
+
+Thiếu ROI làn khẩn cấp, thời gian dừng 2–3 giây/>5 giây, xe rời ROI, ngược sáng/đèn pha đã xác minh và domain camera K230 tại trường.
+
+## 19–20. Subset
+
+PILOT_500 và DATASET_V1_1500 được chia gần cân bằng giữa ba nguồn, theo sequence và chỉ là proposal. Xem `balanced_subset_plan.csv` và `selected_data_manifest.csv`.
+
+## 21. Đề xuất thu K230
+
+Quay theo sequence độc lập: ngày/đêm/mưa/đường ướt/ngược sáng/đèn pha; có xe chạy, chậm, dừng, rời ROI và negative. Main test khóa theo session/video.
+
+## 22. Kết luận
+
+Dùng dữ liệu ngoài cho train, validation sequence-level và cross-domain test. Main project test không được chỉ dùng ba dataset ngoài.
+
+## 23. Nguồn
+
+- MIO-TCD: https://tcd.miovision.com/
+- AAU RainSnow: https://www.kaggle.com/datasets/aalborguniversity/aau-rainsnow
+- UA-DETRAC original dataset name; Kaggle download mirror: https://www.kaggle.com/datasets/bratjay/ua-detrac-orig
+"""
+    (output / "research_findings.md").write_text(findings, encoding="utf-8")
+    daily = f"""[SV1 – {datetime.now().strftime('%d/%m/%Y')}]
+
+1. Hôm nay làm:
+Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đánh giá mức độ phù hợp với hệ thống camera K230 đặt cố định trên cao.
+
+2. Kết quả/bằng chứng:
+- Dataset đã tìm thấy: {", ".join(row["dataset_name"] for row in inventory if row["status"] == "ANALYZED")}
+- Dataset chưa tìm thấy: {", ".join(row["dataset_name"] for row in inventory if row["status"] != "ANALYZED") or "KHÔNG CÓ"}
+- Số ảnh đã kiểm tra: {total_images_checked:,}
+- Số video/sequence đã kiểm tra: {sum(int(row["video_count"]) + int(row["sequence_count"]) for row in inventory):,}
+- Số annotation đã đọc: {total_annotations:,}
+- Số bounding box đã phân tích: {total_boxes_checked:,}
+- Số annotation lỗi duy nhất: {total_invalid:,}
+- Tổng số issue annotation: {total_issues:,}
+- Số nhóm ảnh nghi ngờ trùng: {duplicate_groups:,}
+- Tỷ lệ box dưới 8 px sau resize 320×320: {tiny_rates}
+- Dataset phù hợp nhất về góc camera: {most_relevant[0]} ({most_relevant[1]:.2f}/5, cần review)
+- Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
+- Link báo cáo: reports/external_eda/research_findings.md
+- Link biểu đồ: reports/external_eda/figures/
+- Link commit/PR: commit hiện tại {git_commit()}
+
+3. Vướng mắc/cần hỗ trợ:
+- Class mapping chưa được xác nhận: CÓ, trạng thái PENDING_DATA_LEAD_APPROVAL.
+- Dữ liệu chưa có nhãn detection: KHÔNG; AAU có COCO instance annotation, nhưng điều kiện theo sequence cần review.
+- Dataset quá lớn: CÓ; image quality chạy theo sample/streaming.
+- Thiếu dung lượng: KHÔNG XÁC NHẬN LÀ VƯỚNG MẮC.
+- Thiếu dữ liệu K230 thực tế: CÓ.
+- Cần giảng viên xác nhận: class xe máy/xe đạp, subset, vị trí K230 và protocol main test.
+
+4. Ngày mai:
+- Review các ảnh lỗi.
+- Chốt class mapping.
+- Chốt subset cân bằng.
+- Chuẩn bị dữ liệu gán nhãn còn thiếu.
+- Tiếp tục khảo sát dữ liệu K230 thực tế.
+"""
+    (output / "daily_report_draft.md").write_text(daily, encoding="utf-8")
+
+
+def _report_only(output: Path) -> int:
+    inventory = read_csv(output / "dataset_inventory.csv")
+    if not inventory:
+        print("Không có kết quả EDA để tạo lại báo cáo.", file=sys.stderr)
+        return 2
+    lines = ["# Executive summary — report-only", "", f"- Dataset rows: {len(inventory)}"]
+    for row in inventory:
+        lines.append(
+            f"- {row['dataset_name']}: images={row['image_count']}, bbox={row['bbox_count']}, scope={row['analysis_scope']}"
+        )
+    lines.append("\nSố liệu được đọc lại từ CSV kết quả; không chạy lại dataset.")
+    (output / "executive_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(output.resolve())
+    return 0
+
+
+def run(args: argparse.Namespace) -> int:
+    output = Path(args.output).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    if args.report_only:
+        return _report_only(output)
+    mapping = load_yaml(ROOT / "configs" / "vehicle_class_mapping.yaml")
+    paths = discover(ROOT, args.mio_path, args.aau_path, args.uadetrac_path)
+    print("Dataset paths:")
+    for key, value in paths.items():
+        print(f"- {key}: {value or 'NOT_FOUND'}")
+
+    inspectors = {
+        "mio_tcd": ("MIO-TCD Localization", inspect_mio),
+        "aau_rainsnow": ("AAU RainSnow", inspect_aau),
+        "ua_detrac": ("UA-DETRAC Original", inspect_ua_detrac),
+    }
+    results: list[dict[str, Any]] = []
+    serious_errors: list[str] = []
+    cache_dir = output / "cache"
+    log_lines: list[str] = []
+    for key, (dataset_name, inspector) in inspectors.items():
+        path = paths.get(key)
+        if path is None or not path.exists():
+            results.append(
+                {
+                    "dataset_name": dataset_name,
+                    "path": str(path or ""),
+                    "status": "NOT_FOUND",
+                    "data_type": "",
+                    "image_count": 0,
+                    "video_count": 0,
+                    "sequence_count": 0,
+                    "annotation_status": "NOT_FOUND",
+                    "annotation_file_count": 0,
+                    "annotation_row_count": 0,
+                    "bbox_count": 0,
+                    "bbox_analyzed_count": 0,
+                    "track_count": 0,
+                    "class_counts": {},
+                    "invalid_annotations": [],
+                    "quality_rows": [],
+                    "bbox_samples": [],
+                    "image_records": [],
+                    "sequences": [],
+                    "conditions": [],
+                    "files_processed_successfully": 0,
+                    "files_failed": 0,
+                    "elapsed_seconds": 0,
+                    "analysis_scope": "NOT_FOUND",
+                }
+            )
+            continue
+        cache_path = cache_dir / f"{key}_{'full' if args.full_scan else f'sample_{args.sample_size}'}.json"
+        cached = _load_cache(cache_path) if args.resume else None
+        if cached:
+            print(f"Resume: dùng cache {cache_path}")
+            results.append(cached)
+            continue
+        try:
+            result = inspector(
+                path,
+                sample_size=args.sample_size,
+                full_scan=args.full_scan,
+                skip_images=args.skip_images,
+                progress=True,
+            )
+            results.append(result)
+            _save_cache(cache_path, result)
+        except Exception as error:  # tiếp tục bước độc lập theo prompt
+            serious_errors.append(f"{dataset_name}: {error}")
+            log_lines.append(traceback.format_exc())
+            results.append(
+                {
+                    "dataset_name": dataset_name,
+                    "path": str(path),
+                    "status": "FAILED",
+                    "data_type": "",
+                    "image_count": 0,
+                    "video_count": 0,
+                    "sequence_count": 0,
+                    "annotation_status": "FAILED",
+                    "annotation_file_count": 0,
+                    "annotation_row_count": 0,
+                    "bbox_count": 0,
+                    "bbox_analyzed_count": 0,
+                    "track_count": 0,
+                    "class_counts": {},
+                    "invalid_annotations": [],
+                    "quality_rows": [],
+                    "bbox_samples": [],
+                    "image_records": [],
+                    "sequences": [],
+                    "conditions": [],
+                    "files_processed_successfully": 0,
+                    "files_failed": 1,
+                    "elapsed_seconds": 0,
+                    "analysis_scope": "FAILED",
+                }
+            )
+    if log_lines:
+        (output / "pipeline_errors.log").write_text("\n".join(log_lines), encoding="utf-8")
+    analyzed = [result for result in results if result["status"] == "ANALYZED"]
+    inventory = _inventory(results)
+    class_rows = _class_rows(analyzed, mapping)
+    annotation_quality = _annotation_quality(results)
+    quality_summary, quality_samples = _image_quality(analyzed)
+    bbox_stats, bbox_samples = _bbox_statistics(analyzed)
+    conditions = [row for result in analyzed for row in result.get("conditions", [])]
+    viewpoints = assess_viewpoints(analyzed)
+    duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
+    leakage = detect_leakage(analyzed)
+    plans, manifest, splits = create_plan(analyzed)
+    assert_sequence_split(splits)
+    gaps = _gap_rows()
+    comparison = _comparison(analyzed, bbox_stats, annotation_quality)
+    invalid = [row for result in analyzed for row in result.get("invalid_annotations", [])]
+    stationary = [row for result in analyzed for row in result.get("stationary_candidates", [])]
+
+    write_csv(output / "dataset_inventory.csv", inventory, INVENTORY_FIELDS)
+    write_csv(output / "dataset_comparison.csv", comparison, list(comparison[0]) if comparison else ["dataset_name"])
+    write_csv(output / "annotation_quality.csv", annotation_quality, list(annotation_quality[0]) if annotation_quality else ["dataset_name"])
+    write_csv(output / "image_quality.csv", quality_summary, list(quality_summary[0]) if quality_summary else ["dataset_name"])
+    write_csv(output / "image_quality_samples.csv", quality_samples, QUALITY_SAMPLE_FIELDS)
+    write_csv(output / "bbox_statistics.csv", bbox_stats, list(bbox_stats[0]) if bbox_stats else ["dataset_name"])
+    write_csv(output / "bbox_samples.csv", bbox_samples, BBOX_SAMPLE_FIELDS)
+    write_csv(output / "class_distribution.csv", class_rows, list(class_rows[0]) if class_rows else ["dataset_name"])
+    write_csv(output / "condition_distribution.csv", conditions, ["dataset_name", "condition", "value", "count", "unit", "assessment_source"])
+    write_csv(output / "viewpoint_suitability.csv", viewpoints, VIEWPOINT_FIELDS)
+    write_csv(output / "duplicate_groups.csv", duplicates, DUPLICATE_FIELDS)
+    write_csv(output / "sequence_leakage.csv", leakage, LEAKAGE_FIELDS)
+    write_csv(output / "invalid_annotations.csv", invalid, INVALID_FIELDS)
+    write_csv(output / "dataset_gap_analysis.csv", gaps, list(gaps[0]))
+    write_csv(output / "balanced_subset_plan.csv", plans, list(plans[0]) if plans else ["scenario"])
+    write_csv(output / "selected_data_manifest.csv", manifest, MANIFEST_FIELDS)
+    write_csv(output / "split_proposal.csv", splits, list(splits[0]) if splits else ["dataset_name"])
+    write_csv(
+        output / "stationary_candidates.csv",
+        stationary,
+        [
+            "dataset_name", "sequence_name", "track_id", "original_class", "first_frame",
+            "last_frame", "track_frame_count", "normalized_center_extent",
+            "stationary_candidate", "confidence", "status", "ground_truth",
+            "manual_review_status",
+        ],
+    )
+    figures = _figures(
+        output, inventory, class_rows, quality_samples, bbox_samples, bbox_stats,
+        conditions, viewpoints, plans, gaps, analyzed,
+    )
+    contact_paths: list[str] = []
+    contact_root = ROOT / "storage_placeholders" / "online_data" / "contact_sheets" / "external_eda"
+    if not args.skip_contact_sheets:
+        for result in analyzed:
+            contact = create_contact_sheet(result, contact_root)
+            if contact:
+                contact_paths.append(str(contact))
+    else:
+        contact_paths = [str(path) for path in sorted(contact_root.glob("*.jpg"))] if contact_root.exists() else []
+    contact_status = [
+        {
+            "dataset_name": result["dataset_name"],
+            "contact_sheet_type": "DATASET_REPRESENTATIVE",
+            "status": "GENERATED_PIXELLATED_OUTSIDE_GIT"
+            if any(result["dataset_name"].lower().replace(" ", "_").replace("-", "_") in Path(path).stem for path in contact_paths)
+            else "NOT_GENERATED",
+            "output_location": next(
+                (
+                    path
+                    for path in contact_paths
+                    if result["dataset_name"].lower().replace(" ", "_").replace("-", "_") in Path(path).stem
+                ),
+                "",
+            ),
+            "privacy_status": "WHOLE_IMAGE_PIXELATED",
+            "notes": "Không commit contact sheet; chỉ dùng review cục bộ.",
+        }
+        for result in analyzed
+    ]
+    contact_status.append(
+        {
+            "dataset_name": "ALL",
+            "contact_sheet_type": "CONDITION_AND_ERROR_SPECIFIC",
+            "status": "PENDING_MANUAL_PRIVACY_AND_CONDITION_REVIEW",
+            "output_location": "",
+            "privacy_status": "NOT_EXPORTED",
+            "notes": "Không tự gán weather/day/night hoặc lỗi nhãn khi bằng chứng chưa đủ.",
+        }
+    )
+    write_csv(
+        output / "contact_sheet_status.csv",
+        contact_status,
+        ["dataset_name", "contact_sheet_type", "status", "output_location", "privacy_status", "notes"],
+    )
+    _write_reports(output, inventory, bbox_stats, viewpoints, duplicates, leakage, plans, figures, analyzed)
+
+    print("\nEDA output:")
+    print(output)
+    print(f"Analyzed datasets: {len(analyzed)}/3")
+    print(f"Files/images checked: {sum(int(row['files_processed_successfully']) for row in inventory)}")
+    print(f"Bounding boxes analyzed: {sum(int(row['bbox_analyzed_count']) for row in inventory)}")
+    unique_invalid = {
+        (str(row.get("dataset_name", "")), str(row.get("source_file", "")), str(row.get("annotation_id", "")))
+        for row in invalid
+    }
+    print(f"Invalid annotations (unique): {len(unique_invalid)}; issues: {len(invalid)}")
+    print(f"Duplicate groups: {len({row['duplicate_group_id'] for row in duplicates})}")
+    print(f"Critical leakage: {sum(row.get('severity') == 'CRITICAL' for row in leakage)}")
+    print(f"Contact sheets outside Git: {contact_paths or 'SKIPPED_OR_NOT_AVAILABLE'}")
+    if serious_errors:
+        print("Serious errors:", *serious_errors, sep="\n- ", file=sys.stderr)
+        return 2
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mio-path")
+    parser.add_argument("--aau-path")
+    parser.add_argument("--uadetrac-path")
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--sample-size", type=int, default=5000)
+    parser.add_argument("--full-scan", action="store_true")
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--skip-images", action="store_true")
+    parser.add_argument("--skip-duplicates", action="store_true")
+    parser.add_argument("--skip-contact-sheets", action="store_true")
+    parser.add_argument("--apply-selection", action="store_true")
+    parser.add_argument("--apply-split", action="store_true")
+    parser.add_argument("--report-only", action="store_true")
+    return parser
+
+
+if __name__ == "__main__":
+    raise SystemExit(run(build_parser().parse_args()))

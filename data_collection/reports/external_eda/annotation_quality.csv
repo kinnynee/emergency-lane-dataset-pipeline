@@ -1,0 +1,4 @@
+dataset_name,version_or_download_date,annotation_status,annotation_files_checked,annotations_reported,bounding_boxes_checked,valid_bounding_boxes,invalid_annotations_unique,invalid_issue_count,invalid_annotation_rate,images_without_boxes,annotation_without_image,assessment_source,notes
+MIO-TCD Localization,2026-07-31,PROVIDED_FOR_TRAIN_LOCALIZATION,1,351549,16017,16017,0,0,0.0,0,0,SOURCE_ANNOTATION_SCAN,Một annotation có thể sinh nhiều issue; unique và issue được tách riêng.
+AAU RainSnow,2026-07-31,PROVIDED_COCO_INSTANCE_ANNOTATIONS,2,13297,11794,11794,1503,1503,0.11303301,168,0,SOURCE_ANNOTATION_SCAN,Một annotation có thể sinh nhiều issue; unique và issue được tách riêng.
+UA-DETRAC Original,2026-07-31,PROVIDED_TRACK_XML,100,1274055,1143874,1143874,130181,139987,0.10217848,0,0,SOURCE_ANNOTATION_SCAN,Một annotation có thể sinh nhiều issue; unique và issue được tách riêng.

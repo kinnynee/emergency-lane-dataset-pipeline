@@ -1,1 +1,7 @@
-# Hiện tại các script chỉ dùng thư viện chuẩn của Python.
+# Pipeline EDA dữ liệu Computer Vision bên ngoài.
+matplotlib>=3.9,<4
+numpy>=2.0,<3
+opencv-python>=4.10,<5
+Pillow>=11,<13
+PyYAML>=6,<7
+tqdm>=4.66,<5
