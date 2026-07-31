@@ -1,0 +1,38 @@
+selection_date: "2026-07-31"
+selection_owner: "Data Lead"
+purpose: "vehicle detection from elevated fixed traffic cameras"
+
+active_sources:
+  - source_id: "SRC_ONL002"
+    dataset: "MIO-TCD"
+    component: "Localization"
+    local_archive: "storage_placeholders/online_data/raw/mio_tcd/MIO-TCD-Localization.tar"
+    status: "ACTIVE"
+    reason: "Có bounding box và góc camera giao thông cố định."
+
+  - source_id: "SRC_ONL008"
+    dataset: "AAU RainSnow"
+    component: "Full dataset"
+    local_archive: "storage_placeholders/online_data/raw/aau_rainsnow/aau-rainsnow.zip"
+    status: "ACTIVE"
+    reason: "Bổ sung mưa, tuyết, ban đêm và góc camera cố định."
+
+  - source_id: "SRC_ONL014"
+    dataset: "UA-DETRAC Original"
+    component: "Full Kaggle dataset"
+    local_archive: "storage_placeholders/online_data/raw/ua_detrac_orig/ua-detrac-orig.zip"
+    status: "ACTIVE"
+    reason: "Góc camera trên cao/cố định phù hợp mục tiêu vehicle detection."
+
+excluded_sources:
+  - source_id: "SRC_ONL002"
+    dataset: "MIO-TCD"
+    component: "Classification"
+    local_archive_retained: true
+    reason: "Nhóm chỉ chọn bản Localization."
+
+  - source_id: "SRC_ONL010"
+    dataset: "RADIATE"
+    component: "tiny_foggy sample and full dataset"
+    local_archive_retained: true
+    reason: "Camera trước xe không giống góc camera trên cao cần triển khai."
