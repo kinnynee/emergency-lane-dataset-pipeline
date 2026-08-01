@@ -49,5 +49,10 @@ storage_placeholders/online_data/quarantine/*
 !storage_placeholders/online_data/quarantine/.gitkeep
 reports/external_eda/cache/
 reports/external_eda/*.log
+# Row-level EDA artifacts are reproducible and too large for Git.
+reports/external_eda/bbox_samples.csv
+reports/external_eda/invalid_annotations.csv
+reports/external_eda/image_quality_samples.csv
+reports/external_eda/duplicate_groups.csv
 !reports/external_eda/figures/*.png
 cookies.txt
