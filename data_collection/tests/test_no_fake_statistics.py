@@ -82,3 +82,9 @@ def test_aau_without_annotations_does_not_create_fake_error(tmp_path: Path) -> N
     )
     assert result["annotation_row_count"] == 0
     assert result["invalid_annotations"] == []
+
+
+def test_ua_bbox_sample_is_streaming_reservoir_not_first_n() -> None:
+    source = inspect.getsource(__import__("inspect_ua_detrac").inspect_ua_detrac)
+    assert "bbox_rng.randint(0, bbox_seen - 1)" in source
+    assert "bbox_samples[replacement] = bbox_sample" in source

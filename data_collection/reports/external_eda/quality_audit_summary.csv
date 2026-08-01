@@ -1,0 +1,4 @@
+dataset_name,quality_images_checked,corrupt_or_unreadable,underexposed_suspects,overexposed_suspects,blur_suspects,invalid_annotations_unique,invalid_annotation_issues,exact_duplicate_groups,near_duplicate_groups,duplicate_basename_groups,class_mapping_corrections_in_bbox_sample,unmapped_bbox_sample_count,quality_gate,assessment_scope,notes
+MIO-TCD Localization,5000,0,16,0,0,0,0,29,0,0,551,0,REVIEW_REQUIRED,EDA_SCAN_AND_ANALYSIS_SAMPLE,"Duplicate basename chỉ là tín hiệu cần kiểm tra, không phải bằng chứng nội dung trùng."
+AAU RainSnow,2198,0,0,0,658,1503,1503,1,927,303,762,0,REVIEW_REQUIRED,EDA_SCAN_AND_ANALYSIS_SAMPLE,"Duplicate basename chỉ là tín hiệu cần kiểm tra, không phải bằng chứng nội dung trùng."
+UA-DETRAC Original,5000,0,0,0,313,130181,139987,0,774,1299,0,0,REVIEW_REQUIRED,EDA_SCAN_AND_ANALYSIS_SAMPLE,"Duplicate basename chỉ là tín hiệu cần kiểm tra, không phải bằng chứng nội dung trùng."

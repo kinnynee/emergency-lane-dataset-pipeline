@@ -9,6 +9,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from detect_sequence_leakage import assert_sequence_split
+from create_balanced_subset_plan import create_plan
 from external_eda_common import load_yaml
 from run_external_dataset_eda import _apply_scene_metadata, _scene_assessment_rows
 
@@ -98,3 +99,42 @@ def test_scene_review_table_has_one_row_per_configured_sequence() -> None:
     expected = sum(len(sequences) for sequences in config["assessments"].values())
     assert len(rows) == expected == 10
     assert len({(row["dataset_name"], row["sequence_id"]) for row in rows}) == expected
+
+
+def test_split_policy_keeps_mio_train_only_and_fixed_cross_test() -> None:
+    config_root = Path(__file__).resolve().parents[1] / "configs"
+    policy = load_yaml(config_root / "split_policy.yaml")
+    results = [
+        {
+            "dataset_name": "MIO-TCD Localization",
+            "bbox_samples": [
+                {
+                    "sequence_name": "SEQUENCE_NOT_PROVIDED",
+                    "source_file": "MIO/train/1.jpg",
+                    "original_class": "car",
+                    "mapped_class": "vehicle",
+                }
+            ],
+            "quality_rows": [],
+        },
+        {
+            "dataset_name": "AAU RainSnow",
+            "bbox_samples": [
+                {
+                    "sequence_name": "Hjorringvej-4",
+                    "source_file": "Hjorringvej-4/cam1-1.png",
+                    "original_class": "car",
+                    "mapped_class": "vehicle",
+                }
+            ],
+            "quality_rows": [],
+        },
+    ]
+    _plans, manifest, splits = create_plan(results, policy)
+    mio = next(row for row in splits if row["dataset_name"] == "MIO-TCD Localization")
+    aau = next(row for row in splits if row["dataset_name"] == "AAU RainSnow")
+    assert mio["sequence_id"] == "MIO_NO_SEQUENCE_TRAIN_ONLY"
+    assert mio["proposed_split"] == "EXTERNAL_TRAIN"
+    assert mio["evaluation_eligible"] is False
+    assert aau["proposed_split"] == "CROSS_DATASET_TEST"
+    assert all(row["source_sequence_id"] for row in manifest)

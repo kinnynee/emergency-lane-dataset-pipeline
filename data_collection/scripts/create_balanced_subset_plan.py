@@ -26,11 +26,44 @@ ALLOCATIONS = {
 }
 
 
+def _split_group(
+    dataset: str,
+    source_sequence: str,
+    split_policy: dict[str, Any],
+) -> tuple[str, str]:
+    override = split_policy.get("dataset_overrides", {}).get(dataset, {})
+    if override.get("policy") == "TRAIN_ONLY_NO_SEQUENCE_METADATA":
+        return str(override["sequence_id"]), "DATASET_TRAIN_ONLY_NO_SEQUENCE"
+    return source_sequence, "SEQUENCE_ID"
+
+
+def _proposed_split(
+    dataset: str,
+    sequence: str,
+    split_policy: dict[str, Any],
+) -> tuple[str, bool, str]:
+    override = split_policy.get("dataset_overrides", {}).get(dataset, {})
+    if override:
+        return (
+            str(override.get("proposed_split", "EXTERNAL_TRAIN")),
+            bool(override.get("evaluation_eligible", False)),
+            str(override.get("reason", override.get("policy", "DATASET_OVERRIDE"))),
+        )
+    fixed = split_policy.get("fixed_cross_test_sequences", {}).get(dataset, [])
+    if sequence in fixed:
+        return "CROSS_DATASET_TEST", True, "FIXED_REVIEWED_CROSS_TEST_SEQUENCE"
+    return stable_split(f"{dataset}:{sequence}"), True, "DETERMINISTIC_HASH_BY_DATASET_AND_SEQUENCE"
+
+
 def _unique_candidates(result: dict[str, Any]) -> list[dict[str, Any]]:
     candidates: dict[str, dict[str, Any]] = {}
     for row in result.get("bbox_samples", []):
         source = str(row.get("source_file", "")).replace("\\", "/")
-        if source and source not in candidates:
+        existing = candidates.get(source)
+        if source and (
+            existing is None
+            or (not existing.get("mapped_class") and row.get("mapped_class"))
+        ):
             candidates[source] = {**row, "source_file": source}
     for row in result.get("quality_rows", []):
         source = str(row.get("source_file", "")).replace("\\", "/")
@@ -58,7 +91,11 @@ def _unique_candidates(result: dict[str, Any]) -> list[dict[str, Any]]:
     return ordered
 
 
-def create_plan(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def create_plan(
+    results: list[dict[str, Any]],
+    split_policy: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    split_policy = split_policy or {}
     plans: list[dict[str, Any]] = []
     manifest: list[dict[str, Any]] = []
     splits: list[dict[str, Any]] = []
@@ -82,13 +119,17 @@ def create_plan(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], li
                     "notes": "Ưu tiên sequence khác nhau; cần manual review điều kiện khó.",
                 }
             )
+            seen_sequences: dict[str, tuple[str, str]] = {}
             for row in candidates[:proposed]:
-                sequence = str(row.get("sequence_name", "SEQUENCE_NOT_PROVIDED"))
+                source_sequence = str(row.get("sequence_name", "SEQUENCE_NOT_PROVIDED"))
+                sequence, split_unit = _split_group(dataset, source_sequence, split_policy)
+                seen_sequences[sequence] = (source_sequence, split_unit)
                 manifest.append(
                     {
                         "selection_id": f"SEL_{selection_index:06d}",
                         "dataset_name": dataset,
                         "sequence_id": sequence,
+                        "source_sequence_id": source_sequence,
                         "source_file": row.get("source_file", ""),
                         "annotation_file": "FROM_SOURCE_DATASET",
                         "original_class": row.get("original_class", ""),
@@ -111,18 +152,20 @@ def create_plan(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], li
                     }
                 )
                 selection_index += 1
-            seen_sequences = sorted(
-                {
-                    str(row.get("sequence_name", "SEQUENCE_NOT_PROVIDED"))
-                    for row in candidates[:proposed]
-                }
-            )
-            for sequence in seen_sequences:
+            for sequence, (source_sequence, split_unit) in sorted(seen_sequences.items()):
+                proposed_split, evaluation_eligible, split_reason = _proposed_split(
+                    dataset, sequence, split_policy
+                )
                 splits.append(
                     {
                         "dataset_name": dataset,
                         "sequence_id": sequence,
-                        "proposed_split": stable_split(f"{dataset}:{sequence}"),
+                        "source_sequence_id": source_sequence,
+                        "proposed_split": proposed_split,
+                        "split_unit": split_unit,
+                        "split_policy_reason": split_reason,
+                        "evaluation_eligible": evaluation_eligible,
+                        "locked": False,
                         "road_type": "UNKNOWN",
                         "road_type_assessment_source": "NOT_REVIEWED",
                         "road_type_manual_review_status": "PENDING",
@@ -140,7 +183,7 @@ def create_plan(results: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], li
                         "scene_metadata_notes": "",
                         "apply_status": "PROPOSAL_ONLY",
                         "main_project_test": False,
-                        "notes": "Main project test phải dùng K230 tự quay.",
+                        "notes": "Main project test phải dùng K230 tự quay; split này chưa được apply.",
                     }
                 )
     unique_splits = {

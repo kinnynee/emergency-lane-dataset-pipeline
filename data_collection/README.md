@@ -47,6 +47,9 @@ Tên video: `YYYYMMDD_location_device_condition_session_sequence.mp4`; ảnh: `Y
    - `python scripts/validate_metadata.py`
    - `python scripts/check_image_label_pairs.py`
    - `python scripts/generate_dataset_summary.py`
+6. Chạy EDA ba dataset ngoài từ thư mục repo:
+   - `python data_collection/scripts/run_external_dataset_eda.py --sample-size 5000 --resume --skip-contact-sheets`
+   - Xem `reports/external_eda/quality_review_queue.csv` và `split_validation_summary.csv` trước khi áp dụng subset/split.
 
 ## Definition of Done
 ### Một buổi thu dữ liệu
@@ -69,4 +72,3 @@ Tên video: `YYYYMMDD_location_device_condition_session_sequence.mp4`; ảnh: `Y
 - Tuần 5 (24-28/08/2026): dataset-v1 tối thiểu 1.500 ảnh; test tối thiểu 300 ảnh và khóa cứng.
 - Tuần 6-10: hỗ trợ model, đo theo điều kiện và hai chiến dịch thực nghiệm.
 - Tuần 11-12 (đến 18/10/2026): báo cáo, video minh chứng, bài báo và hồ sơ.
-

@@ -25,6 +25,16 @@ from external_eda_common import (
 )
 
 DATASET = "MIO-TCD Localization"
+VEHICLE_CLASSES = {
+    "articulated_truck",
+    "bus",
+    "car",
+    "motorcycle",
+    "motorized_vehicle",
+    "pickup_truck",
+    "single_unit_truck",
+    "work_van",
+}
 
 
 def _is_image(name: str) -> bool:
@@ -206,7 +216,7 @@ def inspect_mio(
                         "sequence_name": "SEQUENCE_NOT_PROVIDED",
                         "source_file": f"MIO-TCD-Localization/train/{image_id}.jpg",
                         "original_class": original_class,
-                        "mapped_class": "vehicle",
+                        "mapped_class": "vehicle" if label in VEHICLE_CLASSES else "",
                         "box_width": round(box_width, 6),
                         "box_height": round(box_height, 6),
                         "box_area_ratio": round(area_ratio, 8) if area_ratio is not None else "",

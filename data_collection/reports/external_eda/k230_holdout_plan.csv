@@ -1,0 +1,8 @@
+split_name,source,slice_id,dimension,value,minimum_sessions,current_sessions,status,locked,notes
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_DAY,lighting,DAY,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_NIGHT,lighting,NIGHT,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_RAIN_WET,weather,RAIN_OR_WET_ROAD,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_LOW_TRAFFIC,traffic_density,LOW,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_HIGH_TRAFFIC,traffic_density,HIGH,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_EMERGENCY_LANE,road_type,EMERGENCY_LANE_LIKE,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.
+MAIN_K230_TEST,K230_SELF_RECORDED,K230_NEGATIVE,scenario,NO_STOPPED_VEHICLE,1,0,PENDING_COLLECTION,FALSE,Kế hoạch test; chưa phải số liệu đã thu.

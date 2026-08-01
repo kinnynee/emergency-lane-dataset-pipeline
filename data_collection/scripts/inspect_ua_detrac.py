@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 import xml.etree.ElementTree as ET
 import zipfile
@@ -130,6 +131,9 @@ def inspect_ua_detrac(
         boxes_per_image: Counter[str] = Counter()
         invalid_rows: list[dict[str, Any]] = []
         bbox_samples: list[dict[str, Any]] = []
+        bbox_sample_limit = max(100000, sample_size * 20)
+        bbox_seen = 0
+        bbox_rng = random.Random(233)
         sequence_rows: list[dict[str, Any]] = []
         stationary_candidates: list[dict[str, Any]] = []
         total_boxes = 0
@@ -292,24 +296,28 @@ def inspect_ua_detrac(
                     stats["max_x"] = max(stats["max_x"], center_x)
                     stats["min_y"] = min(stats["min_y"], center_y)
                     stats["max_y"] = max(stats["max_y"], center_y)
-                    if len(bbox_samples) < max(100000, sample_size * 20):
-                        bbox_samples.append(
-                            {
-                                "dataset_name": DATASET,
-                                "sequence_name": sequence,
-                                "source_file": image_path_by_frame.get((sequence, frame_number), ""),
-                                "original_class": original_class,
-                                "mapped_class": "vehicle",
-                                "box_width": round(width, 6),
-                                "box_height": round(height, 6),
-                                "box_area_ratio": round(area_ratio, 8) if image_width and image_height else "",
-                                "bbox_size_category": relative_size_category(area_ratio) if image_width and image_height else "UNKNOWN",
-                                "distance": distance_proxy(area_ratio) if image_width and image_height else "UNKNOWN",
-                                "occluded": is_occluded,
-                                "truncation_ratio": truncation,
-                                **letterbox,
-                            }
-                        )
+                    bbox_seen += 1
+                    bbox_sample = {
+                        "dataset_name": DATASET,
+                        "sequence_name": sequence,
+                        "source_file": image_path_by_frame.get((sequence, frame_number), ""),
+                        "original_class": original_class,
+                        "mapped_class": "vehicle",
+                        "box_width": round(width, 6),
+                        "box_height": round(height, 6),
+                        "box_area_ratio": round(area_ratio, 8) if image_width and image_height else "",
+                        "bbox_size_category": relative_size_category(area_ratio) if image_width and image_height else "UNKNOWN",
+                        "distance": distance_proxy(area_ratio) if image_width and image_height else "UNKNOWN",
+                        "occluded": is_occluded,
+                        "truncation_ratio": truncation,
+                        **letterbox,
+                    }
+                    if len(bbox_samples) < bbox_sample_limit:
+                        bbox_samples.append(bbox_sample)
+                    else:
+                        replacement = bbox_rng.randint(0, bbox_seen - 1)
+                        if replacement < bbox_sample_limit:
+                            bbox_samples[replacement] = bbox_sample
 
             total_tracks += len(track_stats)
             for track_id, stats in track_stats.items():

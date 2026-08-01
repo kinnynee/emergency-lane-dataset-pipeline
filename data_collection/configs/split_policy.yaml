@@ -1,0 +1,85 @@
+policy_version: "1.0"
+review_date: "2026-08-01"
+apply_status: PROPOSAL_ONLY
+
+split_unit_priority:
+  - sequence_id
+  - video_id
+  - session_id
+  - source_group
+
+external_ratios:
+  EXTERNAL_TRAIN: 0.75
+  EXTERNAL_VALIDATION: 0.15
+  CROSS_DATASET_TEST: 0.10
+
+dataset_overrides:
+  MIO-TCD Localization:
+    policy: TRAIN_ONLY_NO_SEQUENCE_METADATA
+    sequence_id: MIO_NO_SEQUENCE_TRAIN_ONLY
+    proposed_split: EXTERNAL_TRAIN
+    evaluation_eligible: false
+    reason: "Ảnh tĩnh không có sequence/session đáng tin cậy; chỉ dùng train để tránh leakage vào validation/test."
+
+fixed_cross_test_sequences:
+  AAU RainSnow:
+    - Hjorringvej-4
+    - Ringvej-3
+  UA-DETRAC Original:
+    - MVI_39311
+    - MVI_39401
+    - MVI_39781
+    - MVI_39851
+    - MVI_40191
+    - MVI_40751
+    - MVI_40851
+    - MVI_41063
+
+cross_test_requirements:
+  minimum_datasets: 2
+  required_road_types:
+    - HIGHWAY
+    - URBAN_ROAD
+    - INTERSECTION
+    - EMERGENCY_LANE_LIKE
+  required_lighting:
+    - DAY
+    - TWILIGHT
+    - NIGHT
+  note: "Thiếu EMERGENCY_LANE_LIKE được báo PARTIAL, không tự tạo nhãn."
+
+main_test:
+  split_name: MAIN_K230_TEST
+  source: K230_SELF_RECORDED
+  status: PLACEHOLDER_PENDING_COLLECTION
+  locked: false
+  minimum_independent_sessions: 5
+  required_slices:
+    - slice_id: K230_DAY
+      dimension: lighting
+      value: DAY
+      minimum_sessions: 1
+    - slice_id: K230_NIGHT
+      dimension: lighting
+      value: NIGHT
+      minimum_sessions: 1
+    - slice_id: K230_RAIN_WET
+      dimension: weather
+      value: RAIN_OR_WET_ROAD
+      minimum_sessions: 1
+    - slice_id: K230_LOW_TRAFFIC
+      dimension: traffic_density
+      value: LOW
+      minimum_sessions: 1
+    - slice_id: K230_HIGH_TRAFFIC
+      dimension: traffic_density
+      value: HIGH
+      minimum_sessions: 1
+    - slice_id: K230_EMERGENCY_LANE
+      dimension: road_type
+      value: EMERGENCY_LANE_LIKE
+      minimum_sessions: 1
+    - slice_id: K230_NEGATIVE
+      dimension: scenario
+      value: NO_STOPPED_VEHICLE
+      minimum_sessions: 1

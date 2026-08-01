@@ -38,6 +38,8 @@ Cross-dataset test proposal theo road type: **HIGHWAY=2, INTERSECTION=5, URBAN_R
 
 Metadata cảnh cross-test: **camera_view: ELEVATED_OBLIQUE=10; lighting: DAY=5, NIGHT=2, TWILIGHT=3; traffic_density: HIGH=4, LOW=2, MEDIUM=4; weather: CLEAR=3, CLOUDY=2, RAIN_OR_WET_ROAD=2, UNKNOWN=3**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
 
+Phân bố chi tiết theo class và kích thước bbox được xuất ở `class_distribution_by_scene.csv` và `bbox_distribution_by_scene.csv`; số đếm cấp sequence nằm trong `cross_test_sequence_statistics.csv`. Các tỷ lệ theo scene dùng đúng phạm vi bbox analysis sample và không được trình bày như toàn bộ dataset.
+
 ## 11–12. Bounding box và resize 320×320
 
 Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU RainSnow=0.37476683, UA-DETRAC Original=0.06631237. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.
@@ -45,6 +47,8 @@ Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU Ra
 ## 13–15. Chất lượng ảnh, annotation, trùng và leakage
 
 Đã kiểm tra 12,198 ảnh/frame mẫu; ghi 131,684 annotation lỗi duy nhất (141,490 issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện 0 leakage CRITICAL theo sequence metadata.
+
+Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **1,313** bbox sample theo `vehicle_class_mapping.yaml`; các class vẫn ở trạng thái chờ Data Lead phê duyệt. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 
@@ -65,6 +69,8 @@ Quay theo sequence độc lập: ngày/đêm/mưa/đường ướt/ngược sán
 ## 22. Kết luận
 
 Dùng dữ liệu ngoài cho train, validation sequence-level và cross-domain test. Main project test không được chỉ dùng ba dataset ngoài.
+
+Split validation: **PARTIAL=1, PASS=8, PENDING=2**. MIO-TCD không có sequence/session tin cậy nên chỉ được đề xuất vào `EXTERNAL_TRAIN`; test chính `MAIN_K230_TEST` vẫn là placeholder chờ thu và khóa manifest.
 
 ## 23. Nguồn
 

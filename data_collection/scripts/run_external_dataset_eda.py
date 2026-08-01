@@ -17,7 +17,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from analyze_scene_slices import build_scene_slice_analysis
 from analyze_viewpoint_suitability import assess_viewpoints
+from build_quality_audit import build_quality_audit
 from create_balanced_subset_plan import create_plan
 from create_external_contact_sheets import create_contact_sheet
 from detect_external_duplicates import detect_duplicates
@@ -27,6 +29,7 @@ from external_eda_common import DEFAULT_OUTPUT, ROOT, git_commit, load_yaml, rea
 from inspect_aau_rainsnow import inspect_aau
 from inspect_mio_tcd import inspect_mio
 from inspect_ua_detrac import inspect_ua_detrac
+from validate_split_policy import build_split_audit
 
 VERSION_DATE = "2026-08-01"
 
@@ -51,6 +54,7 @@ QUALITY_SAMPLE_FIELDS = [
 ]
 BBOX_SAMPLE_FIELDS = [
     "dataset_name", "sequence_name", "source_file", "original_class", "mapped_class",
+    "source_mapped_class", "class_mapping_status",
     "box_width", "box_height", "box_area_ratio", "bbox_size_category", "distance",
     "box_width_320", "box_height_320", "box_area_320", "box_320_category",
     "occluded", "truncation_ratio",
@@ -71,12 +75,18 @@ LEAKAGE_FIELDS = [
     "recommended_action", "review_status",
 ]
 MANIFEST_FIELDS = [
-    "selection_id", "dataset_name", "sequence_id", "source_file", "annotation_file",
+    "selection_id", "dataset_name", "sequence_id", "source_sequence_id", "source_file", "annotation_file",
     "original_class", "mapped_class", "lighting", "weather", "distance",
     "road_type", "bbox_size_category", "camera_view", "traffic_density",
     "mean_vehicles_per_image", "scene_metadata_source", "scene_metadata_review_status",
     "selection_reason", "target_subset", "selected", "manual_review_status", "notes",
 ]
+
+DATASET_MAPPING_KEYS = {
+    "MIO-TCD Localization": "mio_tcd",
+    "AAU RainSnow": "aau_rainsnow",
+    "UA-DETRAC Original": "ua_detrac",
+}
 
 
 def _ratio(numerator: int, denominator: int) -> float | str:
@@ -151,14 +161,9 @@ def _inventory(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[dict[str, Any]]:
-    keys = {
-        "MIO-TCD Localization": "mio_tcd",
-        "AAU RainSnow": "aau_rainsnow",
-        "UA-DETRAC Original": "ua_detrac",
-    }
     rows: list[dict[str, Any]] = []
     for result in results:
-        mapping_rows = mapping.get(keys[result["dataset_name"]], {})
+        mapping_rows = mapping.get(DATASET_MAPPING_KEYS[result["dataset_name"]], {})
         for original_class, count in sorted(result.get("class_counts", {}).items()):
             rule = mapping_rows.get(original_class, {})
             rows.append(
@@ -174,6 +179,27 @@ def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[
                 }
             )
     return rows
+
+
+def _normalize_bbox_class_mapping(
+    results: list[dict[str, Any]],
+    mapping: dict[str, Any],
+) -> None:
+    for result in results:
+        rules = mapping.get(DATASET_MAPPING_KEYS[result["dataset_name"]], {})
+        for row in result.get("bbox_samples", []):
+            original_class = str(row.get("original_class", ""))
+            source_mapped = str(row.get("mapped_class", "") or "")
+            rule = rules.get(original_class)
+            expected = str((rule or {}).get("mapped_class") or "")
+            row["source_mapped_class"] = source_mapped
+            row["mapped_class"] = expected
+            if rule is None:
+                row["class_mapping_status"] = "UNMAPPED_CLASS"
+            elif source_mapped == expected:
+                row["class_mapping_status"] = "CONSISTENT"
+            else:
+                row["class_mapping_status"] = "CORRECTED_TO_CONFIG"
 
 
 def _annotation_quality(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -616,6 +642,81 @@ def _figures(
     return created
 
 
+def _audit_figures(
+    output: Path,
+    cross_sequence_stats: list[dict[str, Any]],
+    quality_audit: list[dict[str, Any]],
+    split_distribution: list[dict[str, Any]],
+) -> list[Path]:
+    figures = output / "figures"
+    figures.mkdir(parents=True, exist_ok=True)
+    created: list[Path] = []
+
+    difficulty_path = figures / "21_cross_test_bbox_difficulty.png"
+    _bar(
+        "BBox dưới 8 px sau resize theo cross-test sequence",
+        "Tỷ lệ",
+        [str(row["sequence_id"]) for row in cross_sequence_stats],
+        [float(row.get("difficult_under_8px_ratio") or 0) for row in cross_sequence_stats],
+        difficulty_path,
+    )
+    created.append(difficulty_path)
+
+    quality_path = figures / "22_quality_issue_counts.png"
+    if quality_audit:
+        labels = [str(row["dataset_name"]).replace(" Localization", "") for row in quality_audit]
+        metrics = [
+            ("Invalid annotation", "invalid_annotations_unique"),
+            ("Blur suspect", "blur_suspects"),
+            ("Exact duplicate group", "exact_duplicate_groups"),
+            ("Near duplicate group", "near_duplicate_groups"),
+        ]
+        positions = np.arange(len(labels))
+        width = 0.18
+        figure = plt.figure(figsize=(10, 5.5))
+        for index, (label, field) in enumerate(metrics):
+            values = [float(row.get(field, 0)) for row in quality_audit]
+            plt.bar(positions + (index - 1.5) * width, values, width, label=label)
+        plt.yscale("symlog", linthresh=1)
+        plt.xticks(positions, labels, rotation=15, ha="right")
+        plt.ylabel("Số lượng (symlog)")
+        plt.title(f"Quality issues theo dataset\nDataset version: {VERSION_DATE}")
+        plt.legend(fontsize=8)
+        figure.tight_layout()
+        figure.savefig(quality_path, dpi=150)
+        plt.close(figure)
+    else:
+        _plot_no_data("Quality issues theo dataset", quality_path)
+    created.append(quality_path)
+
+    split_path = figures / "23_split_sequence_distribution.png"
+    if split_distribution:
+        datasets = sorted({str(row["dataset_name"]) for row in split_distribution})
+        split_names = ("EXTERNAL_TRAIN", "EXTERNAL_VALIDATION", "CROSS_DATASET_TEST")
+        lookup = {
+            (str(row["dataset_name"]), str(row["proposed_split"])): int(row["sequence_or_group_count"])
+            for row in split_distribution
+        }
+        positions = np.arange(len(datasets))
+        bottom = np.zeros(len(datasets))
+        figure = plt.figure(figsize=(9, 5.5))
+        for split in split_names:
+            values = np.asarray([lookup.get((dataset, split), 0) for dataset in datasets])
+            plt.bar(positions, values, bottom=bottom, label=split)
+            bottom += values
+        plt.xticks(positions, [name.replace(" Localization", "") for name in datasets], rotation=15, ha="right")
+        plt.ylabel("Số sequence/nhóm")
+        plt.title(f"Proposal split theo đơn vị chống leakage\nDataset version: {VERSION_DATE}")
+        plt.legend(fontsize=8)
+        figure.tight_layout()
+        figure.savefig(split_path, dpi=150)
+        plt.close(figure)
+    else:
+        _plot_no_data("Proposal split theo đơn vị chống leakage", split_path)
+    created.append(split_path)
+    return created
+
+
 def _write_reports(
     output: Path,
     inventory: list[dict[str, Any]],
@@ -628,6 +729,8 @@ def _write_reports(
     results: list[dict[str, Any]],
     road_type_distribution: list[dict[str, Any]],
     scene_distribution: list[dict[str, Any]],
+    quality_audit: list[dict[str, Any]],
+    split_validation: list[dict[str, Any]],
 ) -> None:
     total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
     total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
@@ -673,6 +776,17 @@ def _write_reports(
         + ", ".join(f"{value}={count}" for value, count in sorted(values.items()))
         for dimension, values in sorted(cross_scene_counts.items())
     ) or "CHƯA CÓ"
+    quality_gate_summary = ", ".join(
+        f"{status}={count}"
+        for status, count in sorted(Counter(str(row.get("quality_gate")) for row in quality_audit).items())
+    ) or "CHƯA CÓ"
+    split_check_summary = ", ".join(
+        f"{status}={count}"
+        for status, count in sorted(Counter(str(row.get("status")) for row in split_validation).items())
+    ) or "CHƯA CÓ"
+    class_mapping_corrections = sum(
+        int(row.get("class_mapping_corrections_in_bbox_sample", 0)) for row in quality_audit
+    )
     executive = f"""# Executive summary — External Dataset EDA
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -686,6 +800,8 @@ def _write_reports(
 - Leakage mức CRITICAL: **{critical_leakage:,}**.
 - Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điều kiện cross test đã review: **{cross_scene_summary}**.
+- Quality gate: **{quality_gate_summary}**; bbox sample được sửa theo class mapping: **{class_mapping_corrections:,}**.
+- Kiểm tra split: **{split_check_summary}**; MIO không có sequence được giữ train-only.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
 Không dataset nào có ground-truth “xe dừng trong làn khẩn cấp”. UA-DETRAC chỉ tạo `STATIONARY_CANDIDATE` từ track để con người review; không dùng làm nhãn train. Main test bắt buộc ưu tiên K230 tự quay.
@@ -729,6 +845,8 @@ Cross-dataset test proposal theo road type: **{cross_road_summary}**. Chưa có 
 
 Metadata cảnh cross-test: **{cross_scene_summary}**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
 
+Phân bố chi tiết theo class và kích thước bbox được xuất ở `class_distribution_by_scene.csv` và `bbox_distribution_by_scene.csv`; số đếm cấp sequence nằm trong `cross_test_sequence_statistics.csv`. Các tỷ lệ theo scene dùng đúng phạm vi bbox analysis sample và không được trình bày như toàn bộ dataset.
+
 ## 11–12. Bounding box và resize 320×320
 
 Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, rate in tiny_rates.items())}. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.
@@ -736,6 +854,8 @@ Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, r
 ## 13–15. Chất lượng ảnh, annotation, trùng và leakage
 
 Đã kiểm tra {total_images_checked:,} ảnh/frame mẫu; ghi {total_invalid:,} annotation lỗi duy nhất ({total_issues:,} issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện {critical_leakage:,} leakage CRITICAL theo sequence metadata.
+
+Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`; các class vẫn ở trạng thái chờ Data Lead phê duyệt. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 
@@ -756,6 +876,8 @@ Quay theo sequence độc lập: ngày/đêm/mưa/đường ướt/ngược sán
 ## 22. Kết luận
 
 Dùng dữ liệu ngoài cho train, validation sequence-level và cross-domain test. Main project test không được chỉ dùng ba dataset ngoài.
+
+Split validation: **{split_check_summary}**. MIO-TCD không có sequence/session tin cậy nên chỉ được đề xuất vào `EXTERNAL_TRAIN`; test chính `MAIN_K230_TEST` vẫn là placeholder chờ thu và khóa manifest.
 
 ## 23. Nguồn
 
@@ -783,6 +905,8 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Dataset phù hợp nhất về góc camera: {most_relevant[0]} ({most_relevant[1]:.2f}/5, cần review)
 - Road type trong cross test proposal: {cross_road_summary}; chưa có `EMERGENCY_LANE_LIKE`.
 - Điều kiện cross test đã review: {cross_scene_summary}.
+- Quality gate: {quality_gate_summary}; class mapping corrections trong bbox sample: {class_mapping_corrections:,}.
+- Split validation: {split_check_summary}; MIO train-only, K230 main test đang chờ thu.
 - Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
 - Link báo cáo: reports/external_eda/research_findings.md
 - Link biểu đồ: reports/external_eda/figures/
@@ -829,6 +953,7 @@ def run(args: argparse.Namespace) -> int:
         return _report_only(output)
     mapping = load_yaml(ROOT / "configs" / "vehicle_class_mapping.yaml")
     road_type_config = load_yaml(ROOT / "configs" / "sequence_road_types.yaml")
+    split_policy = load_yaml(ROOT / "configs" / "split_policy.yaml")
     paths = discover(ROOT, args.mio_path, args.aau_path, args.uadetrac_path)
     print("Dataset paths:")
     for key, value in paths.items():
@@ -925,6 +1050,7 @@ def run(args: argparse.Namespace) -> int:
     if log_lines:
         (output / "pipeline_errors.log").write_text("\n".join(log_lines), encoding="utf-8")
     analyzed = [result for result in results if result["status"] == "ANALYZED"]
+    _normalize_bbox_class_mapping(analyzed, mapping)
     inventory = _inventory(results)
     class_rows = _class_rows(analyzed, mapping)
     annotation_quality = _annotation_quality(results)
@@ -934,11 +1060,20 @@ def run(args: argparse.Namespace) -> int:
     viewpoints = assess_viewpoints(analyzed)
     duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
     leakage = detect_leakage(analyzed)
-    plans, manifest, splits = create_plan(analyzed)
+    plans, manifest, splits = create_plan(analyzed, split_policy)
     road_type_distribution, scene_distribution = _apply_scene_metadata(
         splits, manifest, road_type_config
     )
     scene_assessments = _scene_assessment_rows(road_type_config)
+    cross_sequence_stats, class_by_scene, bbox_by_scene = build_scene_slice_analysis(
+        analyzed, road_type_config
+    )
+    quality_audit, label_consistency, quality_review_queue = build_quality_audit(
+        analyzed, duplicates, mapping
+    )
+    split_validation, split_distribution, k230_holdout = build_split_audit(
+        splits, manifest, split_policy
+    )
     assert_sequence_split(splits)
     gaps = _gap_rows()
     comparison = _comparison(analyzed, bbox_stats, annotation_quality)
@@ -986,6 +1121,51 @@ def run(args: argparse.Namespace) -> int:
         ],
     )
     write_csv(
+        output / "cross_test_sequence_statistics.csv",
+        cross_sequence_stats,
+        list(cross_sequence_stats[0]) if cross_sequence_stats else ["dataset_name"],
+    )
+    write_csv(
+        output / "class_distribution_by_scene.csv",
+        class_by_scene,
+        list(class_by_scene[0]) if class_by_scene else ["dimension"],
+    )
+    write_csv(
+        output / "bbox_distribution_by_scene.csv",
+        bbox_by_scene,
+        list(bbox_by_scene[0]) if bbox_by_scene else ["dimension"],
+    )
+    write_csv(
+        output / "quality_audit_summary.csv",
+        quality_audit,
+        list(quality_audit[0]) if quality_audit else ["dataset_name"],
+    )
+    write_csv(
+        output / "label_consistency_audit.csv",
+        label_consistency,
+        list(label_consistency[0]) if label_consistency else ["dataset_name"],
+    )
+    write_csv(
+        output / "quality_review_queue.csv",
+        quality_review_queue,
+        list(quality_review_queue[0]) if quality_review_queue else ["queue_id"],
+    )
+    write_csv(
+        output / "split_validation_summary.csv",
+        split_validation,
+        list(split_validation[0]) if split_validation else ["check_id"],
+    )
+    write_csv(
+        output / "split_distribution.csv",
+        split_distribution,
+        list(split_distribution[0]) if split_distribution else ["dataset_name"],
+    )
+    write_csv(
+        output / "k230_holdout_plan.csv",
+        k230_holdout,
+        list(k230_holdout[0]) if k230_holdout else ["slice_id"],
+    )
+    write_csv(
         output / "stationary_candidates.csv",
         stationary,
         [
@@ -998,6 +1178,9 @@ def run(args: argparse.Namespace) -> int:
     figures = _figures(
         output, inventory, class_rows, quality_samples, bbox_samples, bbox_stats,
         conditions, viewpoints, plans, gaps, analyzed,
+    )
+    figures.extend(
+        _audit_figures(output, cross_sequence_stats, quality_audit, split_distribution)
     )
     contact_paths: list[str] = []
     contact_root = ROOT / "storage_placeholders" / "online_data" / "contact_sheets" / "external_eda"
@@ -1045,7 +1228,7 @@ def run(args: argparse.Namespace) -> int:
     )
     _write_reports(
         output, inventory, bbox_stats, viewpoints, duplicates, leakage, plans, figures,
-        analyzed, road_type_distribution, scene_distribution,
+        analyzed, road_type_distribution, scene_distribution, quality_audit, split_validation,
     )
 
     print("\nEDA output:")
