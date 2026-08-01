@@ -1,4 +1,4 @@
-[SV1 – 31/07/2026]
+[SV1 – 01/08/2026]
 
 1. Hôm nay làm:
 Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đánh giá mức độ phù hợp với hệ thống camera K230 đặt cố định trên cao.
@@ -15,10 +15,11 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Số nhóm ảnh nghi ngờ trùng: 3,333
 - Tỷ lệ box dưới 8 px sau resize 320×320: {'MIO-TCD Localization': 0.13741649, 'AAU RainSnow': 0.37476683, 'UA-DETRAC Original': 0.06631237}
 - Dataset phù hợp nhất về góc camera: AAU RainSnow (4.20/5, cần review)
+- Road type trong cross test proposal: HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3; chưa có `EMERGENCY_LANE_LIKE`.
 - Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
 - Link báo cáo: reports/external_eda/research_findings.md
 - Link biểu đồ: reports/external_eda/figures/
-- Link commit/PR: commit hiện tại fec48ab0ba6cb65ae53fc7892d8094d3088d37f3
+- Link commit/PR: commit hiện tại 287264e942dca86842a60f03c17bc0d6ceb386e9
 
 3. Vướng mắc/cần hỗ trợ:
 - Class mapping chưa được xác nhận: CÓ, trạng thái PENDING_DATA_LEAD_APPROVAL.

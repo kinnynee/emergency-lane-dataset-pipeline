@@ -73,7 +73,7 @@ LEAKAGE_FIELDS = [
 MANIFEST_FIELDS = [
     "selection_id", "dataset_name", "sequence_id", "source_file", "annotation_file",
     "original_class", "mapped_class", "lighting", "weather", "distance",
-    "bbox_size_category", "camera_view", "selection_reason", "target_subset", "selected",
+    "road_type", "bbox_size_category", "camera_view", "selection_reason", "target_subset", "selected",
     "manual_review_status", "notes",
 ]
 
@@ -389,6 +389,48 @@ def _gap_rows() -> list[dict[str, Any]]:
     return rows
 
 
+def _apply_road_types(
+    splits: list[dict[str, Any]],
+    manifest: list[dict[str, Any]],
+    road_type_config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    assessments = road_type_config.get("assessments", {})
+    for row in splits:
+        assessment = (
+            assessments.get(str(row["dataset_name"]), {})
+            .get(str(row["sequence_id"]), {})
+        )
+        if assessment:
+            row["road_type"] = assessment.get("road_type", "UNKNOWN")
+            row["road_type_assessment_source"] = assessment.get("assessment_source", "UNKNOWN")
+            row["road_type_manual_review_status"] = assessment.get("manual_review_status", "PENDING")
+            row["road_type_notes"] = assessment.get("evidence", "")
+    for row in manifest:
+        assessment = (
+            assessments.get(str(row["dataset_name"]), {})
+            .get(str(row["sequence_id"]), {})
+        )
+        row["road_type"] = assessment.get("road_type", "UNKNOWN") if assessment else "UNKNOWN"
+    counts: Counter[tuple[str, str, str]] = Counter(
+        (
+            str(row.get("proposed_split", "UNKNOWN")),
+            str(row.get("dataset_name", "UNKNOWN")),
+            str(row.get("road_type", "UNKNOWN")),
+        )
+        for row in splits
+    )
+    return [
+        {
+            "proposed_split": split,
+            "dataset_name": dataset,
+            "road_type": road_type,
+            "sequence_count": count,
+            "assessment_scope": "SEQUENCE_LEVEL",
+        }
+        for (split, dataset, road_type), count in sorted(counts.items())
+    ]
+
+
 def _plot_no_data(title: str, path: Path, message: str = "CHƯA CÓ DỮ LIỆU XÁC MINH") -> None:
     figure = plt.figure(figsize=(8, 5))
     plt.text(0.5, 0.5, message, ha="center", va="center")
@@ -519,6 +561,7 @@ def _write_reports(
     plans: list[dict[str, Any]],
     figures: list[Path],
     results: list[dict[str, Any]],
+    road_type_distribution: list[dict[str, Any]],
 ) -> None:
     total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
     total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
@@ -546,6 +589,13 @@ def _write_reports(
     tiny_rates = {
         row["dataset_name"]: row.get("difficult_under_8px_ratio", "") for row in bbox_stats
     }
+    cross_road_types: Counter[str] = Counter()
+    for row in road_type_distribution:
+        if row.get("proposed_split") == "CROSS_DATASET_TEST":
+            cross_road_types[str(row.get("road_type", "UNKNOWN"))] += int(row.get("sequence_count", 0))
+    cross_road_summary = ", ".join(
+        f"{road_type}={count}" for road_type, count in sorted(cross_road_types.items())
+    ) or "CHƯA CÓ"
     executive = f"""# Executive summary — External Dataset EDA
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -557,6 +607,7 @@ def _write_reports(
 - Annotation lỗi duy nhất: **{total_invalid:,}**; tổng issue: **{total_issues:,}**.
 - Nhóm trùng/nghi gần trùng trên mẫu: **{duplicate_groups:,}**.
 - Leakage mức CRITICAL: **{critical_leakage:,}**.
+- Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
 Không dataset nào có ground-truth “xe dừng trong làn khẩn cấp”. UA-DETRAC chỉ tạo `STATIONARY_CANDIDATE` từ track để con người review; không dùng làm nhãn train. Main test bắt buộc ưu tiên K230 tự quay.
@@ -595,6 +646,8 @@ Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video 
 ## 8–10. Góc camera, điều kiện và class
 
 Viewpoint cao nhất theo rule hiện tại: **{most_relevant[0]} {most_relevant[1]:.2f}/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
+
+Cross-dataset test proposal theo road type: **{cross_road_summary}**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
 
 ## 11–12. Bounding box và resize 320×320
 
@@ -648,6 +701,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Số nhóm ảnh nghi ngờ trùng: {duplicate_groups:,}
 - Tỷ lệ box dưới 8 px sau resize 320×320: {tiny_rates}
 - Dataset phù hợp nhất về góc camera: {most_relevant[0]} ({most_relevant[1]:.2f}/5, cần review)
+- Road type trong cross test proposal: {cross_road_summary}; chưa có `EMERGENCY_LANE_LIKE`.
 - Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
 - Link báo cáo: reports/external_eda/research_findings.md
 - Link biểu đồ: reports/external_eda/figures/
@@ -693,6 +747,7 @@ def run(args: argparse.Namespace) -> int:
     if args.report_only:
         return _report_only(output)
     mapping = load_yaml(ROOT / "configs" / "vehicle_class_mapping.yaml")
+    road_type_config = load_yaml(ROOT / "configs" / "sequence_road_types.yaml")
     paths = discover(ROOT, args.mio_path, args.aau_path, args.uadetrac_path)
     print("Dataset paths:")
     for key, value in paths.items():
@@ -799,6 +854,7 @@ def run(args: argparse.Namespace) -> int:
     duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
     leakage = detect_leakage(analyzed)
     plans, manifest, splits = create_plan(analyzed)
+    road_type_distribution = _apply_road_types(splits, manifest, road_type_config)
     assert_sequence_split(splits)
     gaps = _gap_rows()
     comparison = _comparison(analyzed, bbox_stats, annotation_quality)
@@ -822,6 +878,11 @@ def run(args: argparse.Namespace) -> int:
     write_csv(output / "balanced_subset_plan.csv", plans, list(plans[0]) if plans else ["scenario"])
     write_csv(output / "selected_data_manifest.csv", manifest, MANIFEST_FIELDS)
     write_csv(output / "split_proposal.csv", splits, list(splits[0]) if splits else ["dataset_name"])
+    write_csv(
+        output / "road_type_distribution.csv",
+        road_type_distribution,
+        ["proposed_split", "dataset_name", "road_type", "sequence_count", "assessment_scope"],
+    )
     write_csv(
         output / "stationary_candidates.csv",
         stationary,
@@ -880,7 +941,10 @@ def run(args: argparse.Namespace) -> int:
         contact_status,
         ["dataset_name", "contact_sheet_type", "status", "output_location", "privacy_status", "notes"],
     )
-    _write_reports(output, inventory, bbox_stats, viewpoints, duplicates, leakage, plans, figures, analyzed)
+    _write_reports(
+        output, inventory, bbox_stats, viewpoints, duplicates, leakage, plans, figures,
+        analyzed, road_type_distribution,
+    )
 
     print("\nEDA output:")
     print(output)

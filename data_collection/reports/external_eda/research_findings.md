@@ -34,6 +34,8 @@ Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video 
 
 Viewpoint cao nhất theo rule hiện tại: **AAU RainSnow 4.20/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
 
+Cross-dataset test proposal theo road type: **HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
+
 ## 11–12. Bounding box và resize 320×320
 
 Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU RainSnow=0.37476683, UA-DETRAC Original=0.06631237. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.

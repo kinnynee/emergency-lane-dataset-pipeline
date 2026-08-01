@@ -1,0 +1,63 @@
+mapping_version: "1.0"
+review_date: "2026-08-01"
+allowed_road_types:
+  - HIGHWAY
+  - URBAN_ROAD
+  - INTERSECTION
+  - EMERGENCY_LANE_LIKE
+  - UNKNOWN
+
+assessments:
+  AAU RainSnow:
+    Hjorringvej-4:
+      road_type: INTERSECTION
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Giao lộ có đèn tín hiệu, vạch qua đường và nhiều hướng rẽ."
+    Ringvej-3:
+      road_type: INTERSECTION
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Giao lộ lớn có đèn tín hiệu, đảo phân luồng và vạch qua đường."
+
+  UA-DETRAC Original:
+    MVI_39311:
+      road_type: INTERSECTION
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Giao lộ đô thị lớn với nhiều luồng xe cắt nhau."
+    MVI_39401:
+      road_type: INTERSECTION
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Giao lộ đô thị nhiều làn và nhiều hướng rẽ."
+    MVI_39781:
+      road_type: URBAN_ROAD
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt."
+    MVI_39851:
+      road_type: URBAN_ROAD
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt, quay ban đêm."
+    MVI_40191:
+      road_type: HIGHWAY
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Đường phân cách hoàn toàn, nhiều làn, không có giao cắt cùng mức."
+    MVI_40751:
+      road_type: URBAN_ROAD
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Đường trục đô thị nhiều làn, có xe buýt và hàng rào phân luồng."
+    MVI_40851:
+      road_type: INTERSECTION
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Giao lộ đô thị rất lớn với nhiều luồng xe cắt nhau."
+    MVI_41063:
+      road_type: HIGHWAY
+      assessment_source: MANUAL_VISUAL_REVIEW
+      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      evidence: "Đường phân cách, nhiều làn, tốc độ cao và không có giao cắt cùng mức."

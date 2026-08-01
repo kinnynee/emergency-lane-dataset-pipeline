@@ -7,3 +7,7 @@
 | UA-DETRAC Original | Train, tracking analysis, cross-domain test | 100 sequence, XML Track ID, weather/camera state | Không có nhãn xe dừng trong ROI; không thấy motorcycle trong class XML |
 
 Kết luận định lượng phải lấy từ `reports/external_eda/*.csv`, không lấy từ bảng mô tả này.
+
+## Road type cho cross-dataset test
+
+`road_type` được gán ở cấp sequence, không gán ngẫu nhiên theo frame. Các giá trị được phép là `HIGHWAY`, `URBAN_ROAD`, `INTERSECTION`, `EMERGENCY_LANE_LIKE` và `UNKNOWN`. Mapping đã review ảnh đại diện nằm trong `configs/sequence_road_types.yaml`; mọi đánh giá vẫn cần Data Lead xác nhận trước khi áp dụng split.
