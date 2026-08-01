@@ -36,6 +36,8 @@ Viewpoint cao nhất theo rule hiện tại: **AAU RainSnow 4.20/5**. AAU bổ s
 
 Cross-dataset test proposal theo road type: **HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
 
+Metadata cảnh cross-test: **camera_view: ELEVATED_OBLIQUE=10; lighting: DAY=5, NIGHT=2, TWILIGHT=3; traffic_density: HIGH=4, LOW=2, MEDIUM=4; weather: CLEAR=3, CLOUDY=2, RAIN_OR_WET_ROAD=2, UNKNOWN=3**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
+
 ## 11–12. Bounding box và resize 320×320
 
 Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU RainSnow=0.37476683, UA-DETRAC Original=0.06631237. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.

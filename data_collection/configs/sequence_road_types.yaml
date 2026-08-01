@@ -1,5 +1,8 @@
-mapping_version: "1.0"
+mapping_version: "1.1"
 review_date: "2026-08-01"
+review_scope: "CROSS_DATASET_TEST_PROPOSAL_SEQUENCE_LEVEL"
+review_method: "Manual visual review plus source annotation/XML statistics"
+
 allowed_road_types:
   - HIGHWAY
   - URBAN_ROAD
@@ -7,57 +10,181 @@ allowed_road_types:
   - EMERGENCY_LANE_LIKE
   - UNKNOWN
 
+allowed_weather:
+  - CLEAR
+  - CLOUDY
+  - RAIN
+  - RAIN_OR_WET_ROAD
+  - SNOW
+  - UNKNOWN
+
+allowed_lighting:
+  - DAY
+  - TWILIGHT
+  - NIGHT
+  - UNKNOWN
+
+allowed_camera_views:
+  - ELEVATED_OBLIQUE
+  - OVERHEAD_TOP_DOWN
+  - ROADSIDE_LEVEL
+  - FRONT_DASHCAM
+  - UNKNOWN
+
+allowed_traffic_density:
+  - LOW
+  - MEDIUM
+  - HIGH
+  - UNKNOWN
+
+traffic_density_rule:
+  metric: "mean annotated vehicle boxes per image"
+  LOW: "<= 4.0"
+  MEDIUM: "> 4.0 and <= 10.0"
+  HIGH: "> 10.0"
+  note: "AAU uses 100 annotated RGB images per reviewed sequence; UA-DETRAC uses all annotated frames."
+
 assessments:
   AAU RainSnow:
     Hjorringvej-4:
       road_type: INTERSECTION
+      weather: RAIN_OR_WET_ROAD
+      lighting: NIGHT
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: MEDIUM
+      mean_vehicles_per_image: 6.48
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      camera_view_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      traffic_density_source: ANNOTATION_MEAN_100_RGB_IMAGES
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Giao lộ có đèn tín hiệu, vạch qua đường và nhiều hướng rẽ."
+      evidence: "Giao lộ có đèn tín hiệu và nhiều hướng rẽ; ba ảnh đầu/giữa/cuối đều cho thấy trời tối, mưa hoặc mặt đường ướt phản sáng, góc camera cố định trên cao nhìn xiên."
     Ringvej-3:
       road_type: INTERSECTION
+      weather: RAIN_OR_WET_ROAD
+      lighting: TWILIGHT
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: LOW
+      mean_vehicles_per_image: 3.88
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      camera_view_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
+      traffic_density_source: ANNOTATION_MEAN_100_RGB_IMAGES
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Giao lộ lớn có đèn tín hiệu, đảo phân luồng và vạch qua đường."
+      evidence: "Giao lộ lớn có đèn tín hiệu và đảo phân luồng; ba ảnh đầu/giữa/cuối cho thấy ánh sáng chạng vạng, mặt đường ướt và góc camera cố định trên cao nhìn xiên."
 
   UA-DETRAC Original:
     MVI_39311:
       road_type: INTERSECTION
+      weather: CLEAR
+      lighting: DAY
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: HIGH
+      mean_vehicles_per_image: 14.92
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: FROM_XML_SUNNY_NORMALIZED_TO_CLEAR
+      lighting_source: MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Giao lộ đô thị lớn với nhiều luồng xe cắt nhau."
+      evidence: "Giao lộ đô thị lớn, ảnh ban ngày khô ráo; XML ghi sunny; trung bình 22.457 bbox trên 1.505 ảnh."
     MVI_39401:
       road_type: INTERSECTION
+      weather: CLEAR
+      lighting: DAY
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: HIGH
+      mean_vehicles_per_image: 10.18
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: FROM_XML_SUNNY_NORMALIZED_TO_CLEAR
+      lighting_source: MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Giao lộ đô thị nhiều làn và nhiều hướng rẽ."
+      evidence: "Giao lộ đô thị nhiều làn, ảnh ban ngày; XML ghi sunny; trung bình 14.097 bbox trên 1.385 ảnh."
     MVI_39781:
       road_type: URBAN_ROAD
+      weather: UNKNOWN
+      lighting: TWILIGHT
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: MEDIUM
+      mean_vehicles_per_image: 4.10
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: NOT_PROVIDED_XML_NIGHT_REASSIGNED_TO_LIGHTING
+      lighting_source: XML_NIGHT_PLUS_MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt."
+      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt; ảnh ở chạng vạng. XML ghi night nên không dùng giá trị này làm nhãn thời tiết."
     MVI_39851:
       road_type: URBAN_ROAD
+      weather: UNKNOWN
+      lighting: NIGHT
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: LOW
+      mean_vehicles_per_image: 3.61
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: NOT_PROVIDED_XML_NIGHT_REASSIGNED_TO_LIGHTING
+      lighting_source: XML_NIGHT_PLUS_MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt, quay ban đêm."
+      evidence: "Đường trục đô thị có dải phân cách và điểm dừng xe buýt, quay ban đêm. XML ghi night nên thời tiết được giữ UNKNOWN."
     MVI_40191:
       road_type: HIGHWAY
+      weather: CLOUDY
+      lighting: DAY
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: HIGH
+      mean_vehicles_per_image: 15.39
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: FROM_XML_METADATA
+      lighting_source: MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Đường phân cách hoàn toàn, nhiều làn, không có giao cắt cùng mức."
+      evidence: "Đường phân cách hoàn toàn, nhiều làn và không có giao cắt cùng mức; ảnh ban ngày; XML ghi cloudy."
     MVI_40751:
       road_type: URBAN_ROAD
+      weather: UNKNOWN
+      lighting: TWILIGHT
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: MEDIUM
+      mean_vehicles_per_image: 6.45
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: NOT_PROVIDED_XML_NIGHT_REASSIGNED_TO_LIGHTING
+      lighting_source: XML_NIGHT_PLUS_MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Đường trục đô thị nhiều làn, có xe buýt và hàng rào phân luồng."
+      evidence: "Đường trục đô thị nhiều làn, ảnh ở chạng vạng. XML ghi night nên không dùng giá trị này làm nhãn thời tiết."
     MVI_40851:
       road_type: INTERSECTION
+      weather: CLOUDY
+      lighting: DAY
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: HIGH
+      mean_vehicles_per_image: 13.39
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: FROM_XML_METADATA
+      lighting_source: MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Giao lộ đô thị rất lớn với nhiều luồng xe cắt nhau."
+      evidence: "Giao lộ đô thị rất lớn với nhiều luồng xe; ảnh ban ngày, trời âm u; XML ghi cloudy."
     MVI_41063:
       road_type: HIGHWAY
+      weather: CLEAR
+      lighting: DAY
+      camera_view: ELEVATED_OBLIQUE
+      traffic_density: MEDIUM
+      mean_vehicles_per_image: 6.68
       assessment_source: MANUAL_VISUAL_REVIEW
+      weather_source: FROM_XML_SUNNY_NORMALIZED_TO_CLEAR
+      lighting_source: MANUAL_VISUAL_REVIEW
+      camera_view_source: MANUAL_VISUAL_REVIEW
+      traffic_density_source: XML_BBOX_COUNT_DIVIDED_BY_IMAGE_COUNT
       manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
-      evidence: "Đường phân cách, nhiều làn, tốc độ cao và không có giao cắt cùng mức."
+      evidence: "Đường phân cách, nhiều làn, không có giao cắt cùng mức; ảnh ban ngày; XML ghi sunny."

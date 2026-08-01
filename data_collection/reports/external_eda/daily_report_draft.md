@@ -16,10 +16,11 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Tỷ lệ box dưới 8 px sau resize 320×320: {'MIO-TCD Localization': 0.13741649, 'AAU RainSnow': 0.37476683, 'UA-DETRAC Original': 0.06631237}
 - Dataset phù hợp nhất về góc camera: AAU RainSnow (4.20/5, cần review)
 - Road type trong cross test proposal: HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3; chưa có `EMERGENCY_LANE_LIKE`.
+- Điều kiện cross test đã review: camera_view: ELEVATED_OBLIQUE=10; lighting: DAY=5, NIGHT=2, TWILIGHT=3; traffic_density: HIGH=4, LOW=2, MEDIUM=4; weather: CLEAR=3, CLOUDY=2, RAIN_OR_WET_ROAD=2, UNKNOWN=3.
 - Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
 - Link báo cáo: reports/external_eda/research_findings.md
 - Link biểu đồ: reports/external_eda/figures/
-- Link commit/PR: commit hiện tại 287264e942dca86842a60f03c17bc0d6ceb386e9
+- Link commit/PR: commit hiện tại 976e0f182744ccededb87910ff6cbee5e06cecff
 
 3. Vướng mắc/cần hỗ trợ:
 - Class mapping chưa được xác nhận: CÓ, trạng thái PENDING_DATA_LEAD_APPROVAL.

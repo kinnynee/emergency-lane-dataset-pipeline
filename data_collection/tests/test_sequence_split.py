@@ -10,6 +10,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from detect_sequence_leakage import assert_sequence_split
 from external_eda_common import load_yaml
+from run_external_dataset_eda import _apply_scene_metadata, _scene_assessment_rows
 
 
 def test_same_sequence_must_not_have_multiple_splits() -> None:
@@ -38,3 +39,62 @@ def test_road_type_config_uses_allowed_values() -> None:
         for item in dataset.values()
     }
     assert values <= allowed
+
+
+def test_scene_metadata_config_uses_allowed_values() -> None:
+    config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "sequence_road_types.yaml")
+    assessments = [
+        item
+        for dataset in config["assessments"].values()
+        for item in dataset.values()
+    ]
+    field_to_allowed = {
+        "weather": "allowed_weather",
+        "lighting": "allowed_lighting",
+        "camera_view": "allowed_camera_views",
+        "traffic_density": "allowed_traffic_density",
+    }
+    for field, allowed_key in field_to_allowed.items():
+        assert {item[field] for item in assessments} <= set(config[allowed_key])
+    assert all(item["weather"] != "NIGHT" for item in assessments)
+
+
+def test_traffic_density_matches_documented_thresholds() -> None:
+    config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "sequence_road_types.yaml")
+    for dataset in config["assessments"].values():
+        for item in dataset.values():
+            mean = float(item["mean_vehicles_per_image"])
+            expected = "LOW" if mean <= 4.0 else "MEDIUM" if mean <= 10.0 else "HIGH"
+            assert item["traffic_density"] == expected
+
+
+def test_scene_metadata_enriches_split_and_manifest() -> None:
+    config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "sequence_road_types.yaml")
+    splits = [
+        {
+            "dataset_name": "UA-DETRAC Original",
+            "sequence_id": "MVI_39851",
+            "proposed_split": "CROSS_DATASET_TEST",
+        }
+    ]
+    manifest = [
+        {
+            "dataset_name": "UA-DETRAC Original",
+            "sequence_id": "MVI_39851",
+        }
+    ]
+    road_distribution, scene_distribution = _apply_scene_metadata(splits, manifest, config)
+    assert splits[0]["road_type"] == "URBAN_ROAD"
+    assert splits[0]["lighting"] == "NIGHT"
+    assert splits[0]["weather"] == "UNKNOWN"
+    assert manifest[0]["traffic_density"] == "LOW"
+    assert road_distribution[0]["sequence_count"] == 1
+    assert len(scene_distribution) == 4
+
+
+def test_scene_review_table_has_one_row_per_configured_sequence() -> None:
+    config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "sequence_road_types.yaml")
+    rows = _scene_assessment_rows(config)
+    expected = sum(len(sequences) for sequences in config["assessments"].values())
+    assert len(rows) == expected == 10
+    assert len({(row["dataset_name"], row["sequence_id"]) for row in rows}) == expected

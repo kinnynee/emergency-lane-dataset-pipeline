@@ -11,3 +11,5 @@ Kết luận định lượng phải lấy từ `reports/external_eda/*.csv`, kh
 ## Road type cho cross-dataset test
 
 `road_type` được gán ở cấp sequence, không gán ngẫu nhiên theo frame. Các giá trị được phép là `HIGHWAY`, `URBAN_ROAD`, `INTERSECTION`, `EMERGENCY_LANE_LIKE` và `UNKNOWN`. Mapping đã review ảnh đại diện nằm trong `configs/sequence_road_types.yaml`; mọi đánh giá vẫn cần Data Lead xác nhận trước khi áp dụng split.
+
+Cùng mapping này lưu thêm `weather`, `lighting`, `camera_view` và `traffic_density`. Nhãn thời tiết không dùng giá trị `night`; khi XML UA-DETRAC ghi `night`, giá trị đó được chuyển sang trường ánh sáng và thời tiết được giữ `UNKNOWN`. Chi tiết phương pháp và kết quả review nằm trong `docs/24_cross_test_scene_metadata_review.md`.

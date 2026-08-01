@@ -28,7 +28,7 @@ from inspect_aau_rainsnow import inspect_aau
 from inspect_mio_tcd import inspect_mio
 from inspect_ua_detrac import inspect_ua_detrac
 
-VERSION_DATE = "2026-07-31"
+VERSION_DATE = "2026-08-01"
 
 INVENTORY_FIELDS = [
     "dataset_name", "version_or_download_date", "source_path", "status", "data_type",
@@ -73,8 +73,9 @@ LEAKAGE_FIELDS = [
 MANIFEST_FIELDS = [
     "selection_id", "dataset_name", "sequence_id", "source_file", "annotation_file",
     "original_class", "mapped_class", "lighting", "weather", "distance",
-    "road_type", "bbox_size_category", "camera_view", "selection_reason", "target_subset", "selected",
-    "manual_review_status", "notes",
+    "road_type", "bbox_size_category", "camera_view", "traffic_density",
+    "mean_vehicles_per_image", "scene_metadata_source", "scene_metadata_review_status",
+    "selection_reason", "target_subset", "selected", "manual_review_status", "notes",
 ]
 
 
@@ -389,12 +390,12 @@ def _gap_rows() -> list[dict[str, Any]]:
     return rows
 
 
-def _apply_road_types(
+def _apply_scene_metadata(
     splits: list[dict[str, Any]],
     manifest: list[dict[str, Any]],
-    road_type_config: dict[str, Any],
-) -> list[dict[str, Any]]:
-    assessments = road_type_config.get("assessments", {})
+    scene_config: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    assessments = scene_config.get("assessments", {})
     for row in splits:
         assessment = (
             assessments.get(str(row["dataset_name"]), {})
@@ -405,12 +406,28 @@ def _apply_road_types(
             row["road_type_assessment_source"] = assessment.get("assessment_source", "UNKNOWN")
             row["road_type_manual_review_status"] = assessment.get("manual_review_status", "PENDING")
             row["road_type_notes"] = assessment.get("evidence", "")
+            for field in ("weather", "lighting", "camera_view", "traffic_density"):
+                row[field] = assessment.get(field, "UNKNOWN")
+                row[f"{field}_source"] = assessment.get(f"{field}_source", "UNKNOWN")
+            row["mean_vehicles_per_image"] = assessment.get("mean_vehicles_per_image", "")
+            row["scene_metadata_manual_review_status"] = assessment.get(
+                "manual_review_status", "PENDING"
+            )
+            row["scene_metadata_notes"] = assessment.get("evidence", "")
     for row in manifest:
         assessment = (
             assessments.get(str(row["dataset_name"]), {})
             .get(str(row["sequence_id"]), {})
         )
         row["road_type"] = assessment.get("road_type", "UNKNOWN") if assessment else "UNKNOWN"
+        if assessment:
+            for field in ("weather", "lighting", "camera_view", "traffic_density"):
+                row[field] = assessment.get(field, "UNKNOWN")
+            row["mean_vehicles_per_image"] = assessment.get("mean_vehicles_per_image", "")
+            row["scene_metadata_source"] = assessment.get("assessment_source", "UNKNOWN")
+            row["scene_metadata_review_status"] = assessment.get(
+                "manual_review_status", "PENDING"
+            )
     counts: Counter[tuple[str, str, str]] = Counter(
         (
             str(row.get("proposed_split", "UNKNOWN")),
@@ -419,7 +436,7 @@ def _apply_road_types(
         )
         for row in splits
     )
-    return [
+    road_type_distribution = [
         {
             "proposed_split": split,
             "dataset_name": dataset,
@@ -429,6 +446,54 @@ def _apply_road_types(
         }
         for (split, dataset, road_type), count in sorted(counts.items())
     ]
+    scene_counts: Counter[tuple[str, str, str, str]] = Counter()
+    for row in splits:
+        for dimension in ("weather", "lighting", "camera_view", "traffic_density"):
+            scene_counts[
+                (
+                    str(row.get("proposed_split", "UNKNOWN")),
+                    str(row.get("dataset_name", "UNKNOWN")),
+                    dimension,
+                    str(row.get(dimension, "UNKNOWN")),
+                )
+            ] += 1
+    scene_distribution = [
+        {
+            "proposed_split": split,
+            "dataset_name": dataset,
+            "dimension": dimension,
+            "value": value,
+            "sequence_count": count,
+            "assessment_scope": "SEQUENCE_LEVEL",
+        }
+        for (split, dataset, dimension, value), count in sorted(scene_counts.items())
+    ]
+    return road_type_distribution, scene_distribution
+
+
+def _scene_assessment_rows(scene_config: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for dataset_name, sequences in scene_config.get("assessments", {}).items():
+        for sequence_id, assessment in sequences.items():
+            rows.append(
+                {
+                    "dataset_name": dataset_name,
+                    "sequence_id": sequence_id,
+                    "road_type": assessment.get("road_type", "UNKNOWN"),
+                    "weather": assessment.get("weather", "UNKNOWN"),
+                    "lighting": assessment.get("lighting", "UNKNOWN"),
+                    "camera_view": assessment.get("camera_view", "UNKNOWN"),
+                    "traffic_density": assessment.get("traffic_density", "UNKNOWN"),
+                    "mean_vehicles_per_image": assessment.get("mean_vehicles_per_image", ""),
+                    "weather_source": assessment.get("weather_source", "UNKNOWN"),
+                    "lighting_source": assessment.get("lighting_source", "UNKNOWN"),
+                    "camera_view_source": assessment.get("camera_view_source", "UNKNOWN"),
+                    "traffic_density_source": assessment.get("traffic_density_source", "UNKNOWN"),
+                    "manual_review_status": assessment.get("manual_review_status", "PENDING"),
+                    "evidence": assessment.get("evidence", ""),
+                }
+            )
+    return rows
 
 
 def _plot_no_data(title: str, path: Path, message: str = "CHƯA CÓ DỮ LIỆU XÁC MINH") -> None:
@@ -562,6 +627,7 @@ def _write_reports(
     figures: list[Path],
     results: list[dict[str, Any]],
     road_type_distribution: list[dict[str, Any]],
+    scene_distribution: list[dict[str, Any]],
 ) -> None:
     total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
     total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
@@ -596,6 +662,17 @@ def _write_reports(
     cross_road_summary = ", ".join(
         f"{road_type}={count}" for road_type, count in sorted(cross_road_types.items())
     ) or "CHƯA CÓ"
+    cross_scene_counts: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    for row in scene_distribution:
+        if row.get("proposed_split") == "CROSS_DATASET_TEST":
+            cross_scene_counts[str(row.get("dimension", "UNKNOWN"))][
+                str(row.get("value", "UNKNOWN"))
+            ] += int(row.get("sequence_count", 0))
+    cross_scene_summary = "; ".join(
+        f"{dimension}: "
+        + ", ".join(f"{value}={count}" for value, count in sorted(values.items()))
+        for dimension, values in sorted(cross_scene_counts.items())
+    ) or "CHƯA CÓ"
     executive = f"""# Executive summary — External Dataset EDA
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -608,6 +685,7 @@ def _write_reports(
 - Nhóm trùng/nghi gần trùng trên mẫu: **{duplicate_groups:,}**.
 - Leakage mức CRITICAL: **{critical_leakage:,}**.
 - Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
+- Điều kiện cross test đã review: **{cross_scene_summary}**.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
 Không dataset nào có ground-truth “xe dừng trong làn khẩn cấp”. UA-DETRAC chỉ tạo `STATIONARY_CANDIDATE` từ track để con người review; không dùng làm nhãn train. Main test bắt buộc ưu tiên K230 tự quay.
@@ -648,6 +726,8 @@ Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video 
 Viewpoint cao nhất theo rule hiện tại: **{most_relevant[0]} {most_relevant[1]:.2f}/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
 
 Cross-dataset test proposal theo road type: **{cross_road_summary}**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
+
+Metadata cảnh cross-test: **{cross_scene_summary}**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
 
 ## 11–12. Bounding box và resize 320×320
 
@@ -702,6 +782,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Tỷ lệ box dưới 8 px sau resize 320×320: {tiny_rates}
 - Dataset phù hợp nhất về góc camera: {most_relevant[0]} ({most_relevant[1]:.2f}/5, cần review)
 - Road type trong cross test proposal: {cross_road_summary}; chưa có `EMERGENCY_LANE_LIKE`.
+- Điều kiện cross test đã review: {cross_scene_summary}.
 - Điều kiện dữ liệu được bổ sung: mưa/tuyết, camera cố định, tracking sequence.
 - Link báo cáo: reports/external_eda/research_findings.md
 - Link biểu đồ: reports/external_eda/figures/
@@ -854,7 +935,10 @@ def run(args: argparse.Namespace) -> int:
     duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
     leakage = detect_leakage(analyzed)
     plans, manifest, splits = create_plan(analyzed)
-    road_type_distribution = _apply_road_types(splits, manifest, road_type_config)
+    road_type_distribution, scene_distribution = _apply_scene_metadata(
+        splits, manifest, road_type_config
+    )
+    scene_assessments = _scene_assessment_rows(road_type_config)
     assert_sequence_split(splits)
     gaps = _gap_rows()
     comparison = _comparison(analyzed, bbox_stats, annotation_quality)
@@ -882,6 +966,24 @@ def run(args: argparse.Namespace) -> int:
         output / "road_type_distribution.csv",
         road_type_distribution,
         ["proposed_split", "dataset_name", "road_type", "sequence_count", "assessment_scope"],
+    )
+    write_csv(
+        output / "scene_metadata_distribution.csv",
+        scene_distribution,
+        [
+            "proposed_split", "dataset_name", "dimension", "value",
+            "sequence_count", "assessment_scope",
+        ],
+    )
+    write_csv(
+        output / "sequence_scene_metadata.csv",
+        scene_assessments,
+        [
+            "dataset_name", "sequence_id", "road_type", "weather", "lighting",
+            "camera_view", "traffic_density", "mean_vehicles_per_image",
+            "weather_source", "lighting_source", "camera_view_source",
+            "traffic_density_source", "manual_review_status", "evidence",
+        ],
     )
     write_csv(
         output / "stationary_candidates.csv",
@@ -943,7 +1045,7 @@ def run(args: argparse.Namespace) -> int:
     )
     _write_reports(
         output, inventory, bbox_stats, viewpoints, duplicates, leakage, plans, figures,
-        analyzed, road_type_distribution,
+        analyzed, road_type_distribution, scene_distribution,
     )
 
     print("\nEDA output:")
