@@ -39,9 +39,11 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 Tests and tracked summary reports do not require the large local datasets:
 
 ```powershell
-python -m pip install -r data_collection/requirements-data.txt
+python -m pip install -r data_collection/requirements-data-lock.txt
 python -m pytest data_collection/tests -q
 ```
+
+`requirements-data-lock.txt` ghi đúng phiên bản môi trường Windows/Python 3.12 đã dùng cho lần EDA được kiểm chứng. File requirements dạng khoảng phiên bản vẫn dùng cho phát triển; tái lập báo cáo nghiên cứu nên dùng lock.
 
 ## Reproduce the full EDA
 

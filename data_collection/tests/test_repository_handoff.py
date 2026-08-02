@@ -21,6 +21,7 @@ def test_required_handoff_files_are_present() -> None:
         REPO_ROOT / "data_collection" / "README.md",
         REPO_ROOT / "data_collection" / "configs" / "split_policy.yaml",
         REPO_ROOT / "data_collection" / "configs" / "aau_sequence_lighting_review.yaml",
+        REPO_ROOT / "data_collection" / "requirements-data-lock.txt",
         REPO_ROOT / "data_collection" / "planning" / "k230_backlit_collection_protocol.csv",
         REPO_ROOT / "data_collection" / "docs" / "21_external_dataset_eda_methodology.md",
         REPO_ROOT / "data_collection" / "docs" / "25_eda_distribution_quality_split.md",
@@ -159,3 +160,14 @@ def test_k230_backlit_protocol_cannot_fake_a_missing_score() -> None:
     assert "ground truth and model predictions" in evaluation["acceptance_criteria"]
     assert split_lock["target"] == "MAIN_K230_TEST_ONLY"
     assert all(row["status"] != "COMPLETED" for row in protocol)
+
+
+def test_reproduction_dependencies_are_exactly_locked() -> None:
+    lock = (
+        REPO_ROOT / "data_collection" / "requirements-data-lock.txt"
+    ).read_text(encoding="utf-8").splitlines()
+    requirements = [line for line in lock if line and not line.startswith("#")]
+
+    assert requirements
+    assert all("==" in requirement for requirement in requirements)
+    assert not any(">=" in requirement or "<=" in requirement for requirement in requirements)
