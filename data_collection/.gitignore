@@ -54,5 +54,6 @@ reports/external_eda/bbox_samples.csv
 reports/external_eda/invalid_annotations.csv
 reports/external_eda/image_quality_samples.csv
 reports/external_eda/duplicate_groups.csv
+reports/external_eda/bbox_boundary_clip_samples.csv
 !reports/external_eda/figures/*.png
 cookies.txt

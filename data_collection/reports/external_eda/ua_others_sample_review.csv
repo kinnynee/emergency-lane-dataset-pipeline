@@ -1,0 +1,13 @@
+dataset_name,original_class,sequence_id,frame_id,review_scope,review_result,mapped_class,include_for_training,preserve_original_class,evidence
+UA-DETRAC Original,others,MVI_40701,131,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Edge/truncated or visually ambiguous motorized road user; retain source class for later audit."
+UA-DETRAC Original,others,MVI_40711,1,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Vehicle-like object; retain source class for later audit."
+UA-DETRAC Original,others,MVI_40712,231,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Object enters/leaves at image edge; retain after boundary clipping."
+UA-DETRAC Original,others,MVI_40714,56,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Small vehicle-like object in traffic scene."
+UA-DETRAC Original,others,MVI_40761,1606,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Small/partly occluded road object; retain source class for later audit."
+UA-DETRAC Original,others,MVI_40762,1291,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Small/partly occluded road object; retain source class for later audit."
+UA-DETRAC Original,others,MVI_40763,1,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Ambiguous small road object; retained under explicit policy and flagged for continued review."
+UA-DETRAC Original,others,MVI_40771,31,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Object clipped at lower image edge; keep using clipped coordinates."
+UA-DETRAC Original,others,MVI_40773,551,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Vehicle-like object in traffic lane."
+UA-DETRAC Original,others,MVI_40774,456,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Object clipped at upper image edge; keep using clipped coordinates."
+UA-DETRAC Original,others,MVI_40775,1,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Object clipped at lower image edge; keep using clipped coordinates."
+UA-DETRAC Original,others,MVI_40792,1,FULL_FRAME_WITH_SOURCE_BOX,KEEP_PER_SUPERVISOR_VEHICLE_POLICY,vehicle,TRUE,TRUE,"Small/partly occluded road object; retain source class for later audit."

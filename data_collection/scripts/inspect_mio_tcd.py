@@ -216,7 +216,7 @@ def inspect_mio(
                         "sequence_name": "SEQUENCE_NOT_PROVIDED",
                         "source_file": f"MIO-TCD-Localization/train/{image_id}.jpg",
                         "original_class": original_class,
-                        "mapped_class": "vehicle" if label in VEHICLE_CLASSES else "",
+                        "mapped_class": "vehicle" if original_class in VEHICLE_CLASSES else "",
                         "box_width": round(box_width, 6),
                         "box_height": round(box_height, 6),
                         "box_area_ratio": round(area_ratio, 8) if area_ratio is not None else "",

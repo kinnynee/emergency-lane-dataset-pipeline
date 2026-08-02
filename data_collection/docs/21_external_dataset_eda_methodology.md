@@ -15,7 +15,8 @@ RADIATE là `EXCLUDED_VIEWPOINT_MISMATCH`. MIO-TCD Classification không đượ
 - Dữ liệu gốc chỉ đọc; không xóa, di chuyển, sửa hoặc tự áp dụng split.
 - Ảnh được giải mã từng file, không giữ batch ảnh lớn trong RAM.
 - Inventory và annotation được quét đầy đủ khi parser hỗ trợ; chất lượng pixel dùng `--sample-size` hoặc `--full-scan`.
-- Kết quả tự động về sáng/tối/mờ/góc nhìn ghi `AUTOMATIC_ESTIMATE`.
+- Brightness, blur và viewpoint tự động chỉ là chỉ số chất lượng, ghi `AUTOMATIC_ESTIMATE`; không dùng brightness để gán trục ánh sáng.
+- `DAY/NIGHT/TWILIGHT` của AAU lấy từ review trực quan ba khung RGB trên đủ 22 sequence.
 - BBox được kiểm tra biên, kích thước, NaN/Infinity và ước lượng letterbox 320×320.
 - `STATIONARY_CANDIDATE` của UA-DETRAC chỉ là heuristic từ Track ID và độ dịch chuyển tâm box; không phải ground truth.
 - Duplicate scan không xóa file. Leakage được kiểm tra theo sequence trước frame.

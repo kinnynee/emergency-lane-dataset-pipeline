@@ -13,6 +13,7 @@ from typing import Any
 from tqdm import tqdm
 
 from external_eda_common import (
+    clip_bbox_to_image,
     distance_proxy,
     image_from_bytes,
     image_quality,
@@ -144,6 +145,8 @@ def inspect_ua_detrac(
         empty_frames = 0
         annotation_missing_image = 0
         ignored_region_count = 0
+        boundary_clipped_bbox_count = 0
+        boundary_clip_samples: list[dict[str, Any]] = []
 
         for xml_info in tqdm(xml_infos, desc="UA XML annotations", disable=not progress):
             split = _split_from_xml_path(xml_info.filename)
@@ -224,16 +227,23 @@ def inspect_ua_detrac(
                         else "UNKNOWN"
                     )
                     class_counts[original_class] += 1
+                    raw_right = left + width
+                    raw_bottom = top + height
                     issues = validate_bbox(
                         left,
                         top,
-                        left + width,
-                        top + height,
+                        raw_right,
+                        raw_bottom,
                         image_width or None,
                         image_height or None,
                     )
-                    if issues:
-                        for issue in issues:
+                    fatal_issues = [
+                        issue
+                        for issue in issues
+                        if issue in {"NAN_OR_INFINITY", "NON_POSITIVE_SIZE"}
+                    ]
+                    if fatal_issues or (issues and not image_width and not image_height):
+                        for issue in fatal_issues or issues:
                             invalid_rows.append(
                                 {
                                     "dataset_name": DATASET,
@@ -243,10 +253,62 @@ def inspect_ua_detrac(
                                     "issue_type": issue,
                                     "severity": "ERROR",
                                     "details": f"{left},{top},{width},{height}",
-                                    "recommended_action": "MANUAL_REVIEW",
+                                    "recommended_action": "REVIEW_MALFORMED_BOX",
                                 }
                             )
                         continue
+                    (clipped_left, clipped_top, clipped_right, clipped_bottom), adjustments = (
+                        clip_bbox_to_image(
+                            left,
+                            top,
+                            raw_right,
+                            raw_bottom,
+                            image_width,
+                            image_height,
+                        )
+                    )
+                    clipped_issues = validate_bbox(
+                        clipped_left,
+                        clipped_top,
+                        clipped_right,
+                        clipped_bottom,
+                        image_width,
+                        image_height,
+                    )
+                    if clipped_issues:
+                        for issue in clipped_issues:
+                            invalid_rows.append(
+                                {
+                                    "dataset_name": DATASET,
+                                    "sequence_name": sequence,
+                                    "source_file": image_path_by_frame.get((sequence, frame_number), xml_info.filename),
+                                    "annotation_id": f"{frame_number}:{track_id}",
+                                    "issue_type": issue,
+                                    "severity": "ERROR",
+                                    "details": f"raw={left},{top},{width},{height};clipped={clipped_left},{clipped_top},{clipped_right},{clipped_bottom}",
+                                    "recommended_action": "EXCLUDE_ONLY_NO_VISIBLE_AREA_AFTER_CLIP",
+                                }
+                            )
+                        continue
+                    if adjustments:
+                        boundary_clipped_bbox_count += 1
+                        if len(boundary_clip_samples) < 1000:
+                            boundary_clip_samples.append(
+                                {
+                                    "dataset_name": DATASET,
+                                    "sequence_name": sequence,
+                                    "source_file": image_path_by_frame.get((sequence, frame_number), ""),
+                                    "annotation_id": f"{frame_number}:{track_id}",
+                                    "original_class": original_class,
+                                    "raw_bbox": f"{left},{top},{width},{height}",
+                                    "clipped_bbox_xyxy": f"{clipped_left},{clipped_top},{clipped_right},{clipped_bottom}",
+                                    "adjustments": "|".join(adjustments),
+                                    "action": "KEEP_OBJECT_USE_CLIPPED_BOX",
+                                }
+                            )
+                    left, top = clipped_left, clipped_top
+                    width = clipped_right - clipped_left
+                    height = clipped_bottom - clipped_top
                     valid_boxes += 1
                     area_ratio = (
                         width * height / (image_width * image_height)
@@ -303,6 +365,12 @@ def inspect_ua_detrac(
                         "source_file": image_path_by_frame.get((sequence, frame_number), ""),
                         "original_class": original_class,
                         "mapped_class": "vehicle",
+                        "raw_box_left": round(float(box.attrib["left"]), 6),
+                        "raw_box_top": round(float(box.attrib["top"]), 6),
+                        "raw_box_width": round(float(box.attrib["width"]), 6),
+                        "raw_box_height": round(float(box.attrib["height"]), 6),
+                        "boundary_clipped": bool(adjustments),
+                        "boundary_clip_sides": "|".join(adjustments),
                         "box_width": round(width, 6),
                         "box_height": round(height, 6),
                         "box_area_ratio": round(area_ratio, 8) if image_width and image_height else "",
@@ -402,6 +470,8 @@ def inspect_ua_detrac(
         "images_without_boxes": empty_frames,
         "annotation_without_image": annotation_missing_image,
         "invalid_annotations": invalid_rows,
+        "boundary_clipped_bbox_count": boundary_clipped_bbox_count,
+        "boundary_clip_samples": boundary_clip_samples,
         "quality_rows": quality_rows,
         "bbox_samples": bbox_samples,
         "bbox_320_counts": dict(bbox_320_counts),

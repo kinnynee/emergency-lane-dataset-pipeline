@@ -1,0 +1,5 @@
+metric,slice,source,status,current_evaluable_sequences,current_map,required_action,leakage_rule
+mAP,DAY,K230_SELF_RECORDED,PENDING_COLLECTION,0,NOT_AVAILABLE,"Collect and label at least one independent DAY session.","Keep entire session in MAIN_K230_TEST."
+mAP,NIGHT,K230_SELF_RECORDED,PENDING_COLLECTION,0,NOT_AVAILABLE,"Collect and label at least one independent NIGHT session.","Keep entire session in MAIN_K230_TEST."
+mAP,BACKLIT,K230_SELF_RECORDED,BLOCKED_MISSING_DATA,0,NOT_AVAILABLE,"Record a dedicated elevated-camera BACKLIT sequence; do not substitute bright DAY images.","Keep entire session in MAIN_K230_TEST and out of train/validation."
+mAP,RAIN,K230_SELF_RECORDED,PENDING_COLLECTION,0,NOT_AVAILABLE,"Collect and label a safe natural-rain or wet-road K230 session.","Keep entire session in MAIN_K230_TEST."

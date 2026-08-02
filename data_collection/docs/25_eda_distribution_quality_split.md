@@ -1,41 +1,36 @@
 # Hoàn thiện EDA: phân bố, chất lượng và chia tập
 
-Ngày chạy: 01/08/2026. Phạm vi gồm MIO-TCD Localization, AAU RainSnow và UA-DETRAC Original. RADIATE vẫn bị loại do sai góc camera.
+Cập nhật ngày 02/08/2026 theo góp ý giảng viên. Phạm vi gồm MIO-TCD Localization, AAU RainSnow và UA-DETRAC Original; RADIATE bị loại do sai góc camera.
 
 ## 1. Phân bố dữ liệu
 
-Phân bố tổng theo dataset và class nằm trong `dataset_inventory.csv`, `class_distribution.csv` và `bbox_statistics.csv`. Phân tích theo metadata cảnh của 10 sequence cross-test được xuất riêng:
+Các báo cáo chính gồm `dataset_inventory.csv`, `class_distribution.csv`, `bbox_statistics.csv`, `cross_test_sequence_statistics.csv`, `class_distribution_by_scene.csv` và `bbox_distribution_by_scene.csv`.
 
-- `cross_test_sequence_statistics.csv`: số ảnh, số bbox, mật độ và tỷ lệ bbox khó của từng sequence.
-- `class_distribution_by_scene.csv`: original class/mapped class theo road type, thời tiết, ánh sáng, góc camera và mật độ.
-- `bbox_distribution_by_scene.csv`: kích thước bbox gốc và sau letterbox 320×320 theo từng lát cắt.
+Class detection được chốt thành một lớp `vehicle`: giữ mọi xe cơ giới kể cả xe máy; bỏ người đi bộ và xe đạp. `preserve_original_class=true` để audit và có thể tính mAP riêng theo lớp gốc. `UA-DETRAC:others` được giữ, đồng thời có bảng mẫu review tại `ua_others_sample_review.csv`.
 
-AAU dùng toàn bộ annotation RGB của sequence đã review. UA-DETRAC dùng số ảnh/bbox toàn sequence từ XML; thống kê class và kích thước dùng reservoir sample 100.000 bbox phủ đủ 100 sequence. Mọi tỷ lệ sample đều được ghi `BBOX_ANALYSIS_SAMPLE`.
+## 2. Ánh sáng AAU RainSnow
 
-## 2. Chất lượng dữ liệu
+Không dùng độ sáng trung bình để gán `DAY/NIGHT`. Độ sáng chỉ còn là chỉ số chất lượng ảnh.
 
-`quality_audit_summary.csv` tổng hợp ảnh hỏng, tối/sáng, blur, annotation lỗi, exact/near duplicate và bất nhất mapping. `quality_review_queue.csv` chuyển các phát hiện thành danh sách hành động có severity.
+Đã xem thủ công khung RGB tại 10%, 50% và 90% của đủ 22 sequence AAU. Kết quả cấu hình tại `configs/aau_sequence_lighting_review.yaml`: `DAY=10`, `NIGHT=11`, `TWILIGHT=1`. Hai sequence cross-test giữ kết quả review: `Hjorringvej-4=NIGHT`, `Ringvej-3=TWILIGHT`.
 
-Kết quả chính:
+## 3. Bounding box UA-DETRAC
 
-- Không có ảnh corrupt/unreadable trong 12.198 ảnh kiểm tra chất lượng.
-- MIO có 16 ảnh nghi thiếu sáng và 29 nhóm exact duplicate trong mẫu.
-- AAU có 658 ảnh nghi blur, 1.503 annotation lỗi duy nhất và temporal near-duplicate cao.
-- UA-DETRAC có 313 ảnh nghi blur và 130.181 annotation lỗi duy nhất; cần lọc box lỗi trước train.
-- Pipeline đã sửa mapping trong bbox sample theo `vehicle_class_mapping.yaml`, đặc biệt không còn coi pedestrian/bicycle chưa duyệt là `vehicle`.
+Box vượt biên ở xe đang đi vào hoặc ra khỏi khung hình là annotation hợp lệ, không phải nhãn lỗi. Pipeline hiện:
 
-Các ngưỡng ảnh chỉ là automatic estimate; quyết định reject vẫn cần review ảnh thật. Duplicate basename không được xem là bằng chứng nội dung trùng.
+1. Giữ tọa độ gốc để truy vết.
+2. Clip box về `[0, width] × [0, height]`.
+3. Giữ đối tượng và dùng box đã clip để tạo label train.
+4. Chỉ loại box malformed hoặc không còn diện tích nhìn thấy sau clip.
 
-## 3. Chia tập và chống leakage
+`boundary_clipped_bbox_count` được báo cáo riêng; không cộng các box này vào `invalid_annotations_unique`. Không được dùng hướng dẫn cũ “lọc box lỗi trước train”.
 
-Chính sách nằm trong `configs/split_policy.yaml`. Proposal hiện có:
+## 4. Chất lượng và chia tập
 
-- MIO-TCD: train-only vì không có sequence/session tin cậy.
-- AAU: 18 sequence train, 2 validation, 2 cross-test.
-- UA-DETRAC: 71 sequence train, 21 validation, 8 cross-test.
-- 10 sequence cross-test được cố định sau khi review metadata cảnh.
-- `MAIN_K230_TEST` được giữ riêng trong `k230_holdout_plan.csv`, chưa có dữ liệu và chưa khóa.
+Ảnh mờ, tối/sáng, corrupt, duplicate và nhãn malformed vẫn đi qua quality audit. Việc clip box biên là thao tác chuẩn hóa có chủ đích, không tự làm quality gate thất bại.
 
-`split_validation_summary.csv` xác nhận không có sequence hoặc source file xuất hiện ở nhiều split và không chia random frame. Coverage road type hiện `PARTIAL` vì chưa có `EMERGENCY_LANE_LIKE`; K230 holdout và test lock vẫn `PENDING`.
+Dữ liệu tiếp tục chia nguyên sequence: MIO train-only, AAU 18/2/2 và UA-DETRAC 71/21/8 theo train/validation/cross-test proposal. Tất cả vẫn là `PROPOSAL_ONLY`; pipeline không copy, di chuyển hoặc xóa dữ liệu gốc.
 
-Tất cả split vẫn là `PROPOSAL_ONLY`: pipeline chưa copy, di chuyển hay xóa dữ liệu gốc.
+## 5. Slice mAP còn thiếu
+
+Bảng bài báo cần `DAY`, `NIGHT`, `BACKLIT`, `RAIN`. `evaluation_slice_readiness.csv` ghi rõ `BACKLIT=BLOCKED_MISSING_DATA`, không điền số giả. `configs/split_policy.yaml` đã thêm `K230_BACKLIT` làm slice riêng của `MAIN_K230_TEST`.

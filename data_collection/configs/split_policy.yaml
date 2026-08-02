@@ -1,5 +1,5 @@
-policy_version: "1.0"
-review_date: "2026-08-01"
+policy_version: "1.1"
+review_date: "2026-08-02"
 apply_status: PROPOSAL_ONLY
 
 split_unit_priority:
@@ -48,6 +48,15 @@ cross_test_requirements:
     - NIGHT
   note: "Thiếu EMERGENCY_LANE_LIKE được báo PARTIAL, không tự tạo nhãn."
 
+paper_evaluation:
+  primary_metric: mAP
+  required_slices:
+    - DAY
+    - NIGHT
+    - BACKLIT
+    - RAIN
+  rule: "Report each slice separately; never infer a missing BACKLIT value from DAY brightness."
+
 main_test:
   split_name: MAIN_K230_TEST
   source: K230_SELF_RECORDED
@@ -63,6 +72,11 @@ main_test:
       dimension: lighting
       value: NIGHT
       minimum_sessions: 1
+    - slice_id: K230_BACKLIT
+      dimension: lighting
+      value: BACKLIT
+      minimum_sessions: 1
+      collection_rule: "Dedicated sequence with sun or strong light source facing the elevated K230 camera."
     - slice_id: K230_RAIN_WET
       dimension: weather
       value: RAIN_OR_WET_ROAD

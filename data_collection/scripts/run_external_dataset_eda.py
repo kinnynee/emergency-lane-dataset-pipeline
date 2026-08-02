@@ -31,14 +31,14 @@ from inspect_mio_tcd import inspect_mio
 from inspect_ua_detrac import inspect_ua_detrac
 from validate_split_policy import build_split_audit
 
-VERSION_DATE = "2026-08-01"
+VERSION_DATE = "2026-08-02"
 
 INVENTORY_FIELDS = [
     "dataset_name", "version_or_download_date", "source_path", "status", "data_type",
     "image_count", "video_count", "sequence_count", "annotation_status",
     "annotation_file_count", "annotation_row_count", "bbox_count", "bbox_analyzed_count",
     "track_count", "class_count", "images_without_boxes", "invalid_annotation_count",
-    "invalid_issue_count", "files_processed_successfully", "files_failed", "analysis_scope",
+    "invalid_issue_count", "boundary_clipped_bbox_count", "files_processed_successfully", "files_failed", "analysis_scope",
     "elapsed_seconds", "git_commit",
 ]
 INVALID_FIELDS = [
@@ -55,6 +55,8 @@ QUALITY_SAMPLE_FIELDS = [
 BBOX_SAMPLE_FIELDS = [
     "dataset_name", "sequence_name", "source_file", "original_class", "mapped_class",
     "source_mapped_class", "class_mapping_status",
+    "raw_box_left", "raw_box_top", "raw_box_width", "raw_box_height",
+    "boundary_clipped", "boundary_clip_sides",
     "box_width", "box_height", "box_area_ratio", "bbox_size_category", "distance",
     "box_width_320", "box_height_320", "box_area_320", "box_320_category",
     "occluded", "truncation_ratio",
@@ -150,6 +152,7 @@ def _inventory(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "images_without_boxes": result.get("images_without_boxes", 0),
                 "invalid_annotation_count": len(unique_invalid),
                 "invalid_issue_count": len(invalid_rows),
+                "boundary_clipped_bbox_count": result.get("boundary_clipped_bbox_count", 0),
                 "files_processed_successfully": result.get("files_processed_successfully", 0),
                 "files_failed": result.get("files_failed", 0),
                 "analysis_scope": result.get("analysis_scope", ""),
@@ -166,6 +169,7 @@ def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[
         mapping_rows = mapping.get(DATASET_MAPPING_KEYS[result["dataset_name"]], {})
         for original_class, count in sorted(result.get("class_counts", {}).items()):
             rule = mapping_rows.get(original_class, {})
+            requires_review = rule.get("review_required", True)
             rows.append(
                 {
                     "dataset_name": result["dataset_name"],
@@ -173,9 +177,15 @@ def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[
                     "count": count,
                     "mapped_class": rule.get("mapped_class", ""),
                     "include_for_training": rule.get("include", ""),
-                    "reason": "MAPPING_PENDING_DATA_LEAD_APPROVAL",
-                    "manual_review_required": rule.get("review_required", True),
-                    "mapping_status": "DEFINED" if original_class in mapping_rows else "UNMAPPED",
+                    "reason": rule.get("review_note", "SUPERVISOR_CLASS_POLICY_2026_08_02"),
+                    "manual_review_required": requires_review,
+                    "mapping_status": (
+                        "UNMAPPED"
+                        if original_class not in mapping_rows
+                        else "DEFINED_REVIEW_REQUIRED"
+                        if requires_review
+                        else "APPROVED"
+                    ),
                 }
             )
     return rows
@@ -225,10 +235,12 @@ def _annotation_quality(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "valid_bounding_boxes": valid,
                 "invalid_annotations_unique": invalid,
                 "invalid_issue_count": len(invalid_rows),
+                "boundary_clipped_bbox_count": result.get("boundary_clipped_bbox_count", 0),
                 "invalid_annotation_rate": _ratio(invalid, valid + invalid),
                 "images_without_boxes": result.get("images_without_boxes", 0),
                 "annotation_without_image": result.get("annotation_without_image", 0),
                 "assessment_source": "SOURCE_ANNOTATION_SCAN",
+                "bbox_boundary_policy": "CLIP_TO_IMAGE_AND_KEEP_OBJECT",
                 "notes": "Một annotation có thể sinh nhiều issue; unique và issue được tách riêng.",
             }
         )
@@ -323,8 +335,8 @@ def _comparison(
                 "has_bounding_box": result.get("bbox_count", 0) > 0,
                 "has_track_id": result.get("track_count", 0) > 0,
                 "has_weather_label": "FROM_XML_METADATA" if name == "UA-DETRAC Original" else "DATASET_LEVEL_OR_NOT_SEPARATED" if name == "AAU RainSnow" else "NOT_VERIFIED",
-                "has_day": "AUTOMATIC_ESTIMATE" if name == "AAU RainSnow" else "NOT_VERIFIED",
-                "has_night": "AUTOMATIC_ESTIMATE" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_day": "MANUAL_SEQUENCE_REVIEW" if name == "AAU RainSnow" else "NOT_VERIFIED",
+                "has_night": "MANUAL_SEQUENCE_REVIEW" if name == "AAU RainSnow" else "NOT_VERIFIED",
                 "has_rain": "DATASET_LEVEL" if name == "AAU RainSnow" else ("TRUE" if "rainy" in condition_values else "NOT_VERIFIED"),
                 "has_snow": "DATASET_LEVEL_NOT_SEPARATED" if name == "AAU RainSnow" else "NOT_VERIFIED",
                 "has_wet_road": "MANUAL_REVIEW_REQUIRED",
@@ -377,7 +389,7 @@ def _gap_rows() -> list[dict[str, Any]]:
             action = "Thu và gán nhãn sequence K230 có ROI/tracking."
         elif condition in {"Mưa", "Đường ướt", "Ban đêm", "Đèn pha"}:
             mio = "NOT_VERIFIED"
-            aau = "DATASET_LEVEL_OR_AUTOMATIC_ESTIMATE"
+            aau = "DATASET_LEVEL_OR_MANUAL_SEQUENCE_REVIEW"
             ua = "PARTIAL" if condition == "Mưa" else "NOT_VERIFIED"
             status = "PARTIAL"
             gap = "HIGH"
@@ -745,6 +757,20 @@ def _write_reports(
         for result in results
     )
     total_issues = sum(len(result.get("invalid_annotations", [])) for result in results)
+    total_boundary_clipped = sum(
+        int(result.get("boundary_clipped_bbox_count", 0)) for result in results
+    )
+    aau_lighting_counts = Counter(
+        str(row.get("value", "UNKNOWN"))
+        for result in results
+        if result.get("dataset_name") == "AAU RainSnow"
+        for row in result.get("conditions", [])
+        if row.get("condition") == "lighting"
+        for _ in range(int(row.get("count", 0)))
+    )
+    aau_lighting_summary = ", ".join(
+        f"{label}={count}" for label, count in sorted(aau_lighting_counts.items())
+    ) or "NOT_AVAILABLE"
     duplicate_groups = len({row["duplicate_group_id"] for row in duplicates})
     critical_leakage = sum(row.get("severity") == "CRITICAL" for row in leakage)
     most_relevant = max(
@@ -791,6 +817,8 @@ def _write_reports(
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 - Dataset: MIO-TCD Localization, AAU RainSnow, UA-DETRAC Original.
+- AAU lighting manual review (22 sequence): **{aau_lighting_summary}**.
+- UA-DETRAC boundary-crossing bbox clipped and kept: **{total_boundary_clipped:,}**.
 - RADIATE: `EXCLUDED_VIEWPOINT_MISMATCH`, không chạy EDA.
 - Ảnh/frame kiểm tra chất lượng thật: **{total_images_checked:,}**.
 - Annotation rows đọc: **{total_annotations:,}**.
@@ -841,7 +869,7 @@ Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video 
 
 Viewpoint cao nhất theo rule hiện tại: **{most_relevant[0]} {most_relevant[1]:.2f}/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
 
-Cross-dataset test proposal theo road type: **{cross_road_summary}**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
+Cross-dataset test proposal theo road type: **{cross_road_summary}**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; metadata cảnh vẫn chờ Data Lead duyệt.
 
 Metadata cảnh cross-test: **{cross_scene_summary}**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
 
@@ -855,7 +883,7 @@ Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, r
 
 Đã kiểm tra {total_images_checked:,} ảnh/frame mẫu; ghi {total_invalid:,} annotation lỗi duy nhất ({total_issues:,} issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện {critical_leakage:,} leakage CRITICAL theo sequence metadata.
 
-Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`; các class vẫn ở trạng thái chờ Data Lead phê duyệt. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 
@@ -913,7 +941,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Link commit/PR: commit hiện tại {git_commit()}
 
 3. Vướng mắc/cần hỗ trợ:
-- Class mapping chưa được xác nhận: CÓ, trạng thái PENDING_DATA_LEAD_APPROVAL.
+- Class mapping đã chốt: CÓ; chỉ `UA-DETRAC:others` tiếp tục sample review và luôn giữ original class.
 - Dữ liệu chưa có nhãn detection: KHÔNG; AAU có COCO instance annotation, nhưng điều kiện theo sequence cần review.
 - Dataset quá lớn: CÓ; image quality chạy theo sample/streaming.
 - Thiếu dung lượng: KHÔNG XÁC NHẬN LÀ VƯỚNG MẮC.
@@ -922,7 +950,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 
 4. Ngày mai:
 - Review các ảnh lỗi.
-- Chốt class mapping.
+- Tiếp tục sample review class `UA-DETRAC:others`.
 - Chốt subset cân bằng.
 - Chuẩn bị dữ liệu gán nhãn còn thiếu.
 - Tiếp tục khảo sát dữ liệu K230 thực tế.
@@ -1078,6 +1106,9 @@ def run(args: argparse.Namespace) -> int:
     gaps = _gap_rows()
     comparison = _comparison(analyzed, bbox_stats, annotation_quality)
     invalid = [row for result in analyzed for row in result.get("invalid_annotations", [])]
+    boundary_clip_samples = [
+        row for result in analyzed for row in result.get("boundary_clip_samples", [])
+    ]
     stationary = [row for result in analyzed for row in result.get("stationary_candidates", [])]
 
     write_csv(output / "dataset_inventory.csv", inventory, INVENTORY_FIELDS)
@@ -1093,6 +1124,14 @@ def run(args: argparse.Namespace) -> int:
     write_csv(output / "duplicate_groups.csv", duplicates, DUPLICATE_FIELDS)
     write_csv(output / "sequence_leakage.csv", leakage, LEAKAGE_FIELDS)
     write_csv(output / "invalid_annotations.csv", invalid, INVALID_FIELDS)
+    write_csv(
+        output / "bbox_boundary_clip_samples.csv",
+        boundary_clip_samples,
+        [
+            "dataset_name", "sequence_name", "source_file", "annotation_id",
+            "original_class", "raw_bbox", "clipped_bbox_xyxy", "adjustments", "action",
+        ],
+    )
     write_csv(output / "dataset_gap_analysis.csv", gaps, list(gaps[0]))
     write_csv(output / "balanced_subset_plan.csv", plans, list(plans[0]) if plans else ["scenario"])
     write_csv(output / "selected_data_manifest.csv", manifest, MANIFEST_FIELDS)

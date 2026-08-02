@@ -13,7 +13,7 @@ External datasets currently in scope:
 - **UA-DETRAC**: elevated traffic-camera sequences; proposed sequence split is 71 train / 21 validation / 8 cross-test sequences.
 - **RADIATE is excluded** because its forward-facing camera viewpoint does not match the elevated K230 deployment viewpoint.
 
-EDA currently covers 12,198 sampled images and 1,171,685 bounding boxes. The proposed cross-test set covers `HIGHWAY`, `INTERSECTION`, and `URBAN_ROAD`; `EMERGENCY_LANE_LIKE` is still missing. Quality gates remain `REVIEW_REQUIRED`, so the data is not yet marked train-ready.
+EDA currently covers 12,198 sampled images and 1,301,866 valid/analyzed bounding boxes. AAU lighting was manually reviewed for all 22 sequences (`DAY=10`, `NIGHT=11`, `TWILIGHT=1`). UA-DETRAC has 130,181 boundary-crossing boxes that are clipped and kept, with zero remaining invalid UA annotations. The proposed cross-test set covers `HIGHWAY`, `INTERSECTION`, and `URBAN_ROAD`; `EMERGENCY_LANE_LIKE` and the dedicated K230 `BACKLIT` recording are still missing. Quality gates remain `REVIEW_REQUIRED`, so the data is not yet marked train-ready.
 
 All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is still pending collection and must remain locked from training after it is created.
 
@@ -23,10 +23,12 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 - [`data_collection/configs/split_policy.yaml`](data_collection/configs/split_policy.yaml): leakage-safe sequence split policy.
 - [`data_collection/docs/21_external_dataset_eda_methodology.md`](data_collection/docs/21_external_dataset_eda_methodology.md): EDA methodology.
 - [`data_collection/docs/25_eda_distribution_quality_split.md`](data_collection/docs/25_eda_distribution_quality_split.md): distribution, quality, road-type, and split audit notes.
+- [`data_collection/docs/26_supervisor_feedback_corrections.md`](data_collection/docs/26_supervisor_feedback_corrections.md): corrections for lighting labels, boundary boxes, class mapping, and the missing backlit slice.
 - [`data_collection/reports/external_eda/executive_summary.md`](data_collection/reports/external_eda/executive_summary.md): main EDA handoff summary.
 - [`data_collection/reports/external_eda/quality_audit_summary.csv`](data_collection/reports/external_eda/quality_audit_summary.csv): dataset-level quality gates.
 - [`data_collection/reports/external_eda/split_validation_summary.csv`](data_collection/reports/external_eda/split_validation_summary.csv): leakage and split validation results.
 - [`data_collection/reports/external_eda/k230_holdout_plan.csv`](data_collection/reports/external_eda/k230_holdout_plan.csv): planned road-type coverage for the future K230 holdout.
+- [`data_collection/reports/external_eda/evaluation_slice_readiness.csv`](data_collection/reports/external_eda/evaluation_slice_readiness.csv): readiness of the required DAY/NIGHT/BACKLIT/RAIN mAP slices.
 
 ## Quick verification
 
@@ -50,6 +52,6 @@ Generated row-level files such as `bbox_samples.csv`, `image_quality_samples.csv
 ## Remaining decisions
 
 - Collect and lock a representative K230 test set, including an `EMERGENCY_LANE_LIKE` road type.
-- Review blurred/dark images, suspected duplicates, and invalid annotations listed by the local EDA queues.
+- Review blurred/dark images, suspected duplicates, malformed annotations, and UA-DETRAC `others` samples listed by the EDA queues.
 - Confirm the final class mapping and split proposal with the Data Lead before training.
 - Add real stopped-vehicle-in-ROI examples; the current external data does not provide sufficient ground truth for this target condition.

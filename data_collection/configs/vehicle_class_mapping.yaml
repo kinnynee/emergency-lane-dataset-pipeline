@@ -1,93 +1,36 @@
-mapping_version: "1.0"
-review_status: "PENDING_DATA_LEAD_APPROVAL"
+mapping_version: "2.0"
+review_status: "APPROVED_FROM_SUPERVISOR_FEEDBACK_2026_08_02"
+target_class: vehicle
 preserve_original_class: true
+policy: "Include all motor vehicles, including motorcycles; exclude pedestrians and bicycles."
 
 mio_tcd:
-  articulated_truck:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  bicycle:
-    mapped_class: null
-    include: null
-    review_required: true
-  bus:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  car:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  motorcycle:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  motorized_vehicle:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  non-motorized_vehicle:
-    mapped_class: null
-    include: null
-    review_required: true
-  pedestrian:
-    mapped_class: null
-    include: false
-    review_required: true
-  pickup_truck:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  single_unit_truck:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  work_van:
-    mapped_class: vehicle
-    include: null
-    review_required: true
+  articulated_truck: {mapped_class: vehicle, include: true, review_required: false}
+  bicycle: {mapped_class: null, include: false, review_required: false}
+  bus: {mapped_class: vehicle, include: true, review_required: false}
+  car: {mapped_class: vehicle, include: true, review_required: false}
+  motorcycle: {mapped_class: vehicle, include: true, review_required: false}
+  motorized_vehicle: {mapped_class: vehicle, include: true, review_required: false}
+  non-motorized_vehicle: {mapped_class: null, include: false, review_required: false}
+  pedestrian: {mapped_class: null, include: false, review_required: false}
+  pickup_truck: {mapped_class: vehicle, include: true, review_required: false}
+  single_unit_truck: {mapped_class: vehicle, include: true, review_required: false}
+  work_van: {mapped_class: vehicle, include: true, review_required: false}
 
 aau_rainsnow:
-  bicycle:
-    mapped_class: null
-    include: null
-    review_required: true
-  bus:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  car:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  motorbike:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  truck:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  person:
-    mapped_class: null
-    include: false
-    review_required: true
+  bicycle: {mapped_class: null, include: false, review_required: false}
+  bus: {mapped_class: vehicle, include: true, review_required: false}
+  car: {mapped_class: vehicle, include: true, review_required: false}
+  motorbike: {mapped_class: vehicle, include: true, review_required: false}
+  truck: {mapped_class: vehicle, include: true, review_required: false}
+  person: {mapped_class: null, include: false, review_required: false}
 
 ua_detrac:
-  bus:
-    mapped_class: vehicle
-    include: null
-    review_required: true
-  car:
-    mapped_class: vehicle
-    include: null
-    review_required: true
+  bus: {mapped_class: vehicle, include: true, review_required: false}
+  car: {mapped_class: vehicle, include: true, review_required: false}
   others:
     mapped_class: vehicle
-    include: null
+    include: true
     review_required: true
-  van:
-    mapped_class: vehicle
-    include: null
-    review_required: true
+    review_note: "Keep as vehicle per supervisor; 12-sequence visual sample reviewed and original class retained. Continue sampling ambiguous edge cases."
+  van: {mapped_class: vehicle, include: true, review_required: false}

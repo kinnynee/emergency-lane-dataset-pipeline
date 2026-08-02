@@ -66,6 +66,7 @@ def build_quality_audit(
         overexposed = sum(bool(row.get("overexposed_suspect")) for row in valid_quality)
         blurred = sum(bool(row.get("blur_suspect")) for row in valid_quality)
         invalid_rows = result.get("invalid_annotations", [])
+        boundary_clipped = int(result.get("boundary_clipped_bbox_count", 0))
         invalid_unique = len(
             {
                 (str(row.get("source_file", "")), str(row.get("annotation_id", "")))
@@ -94,6 +95,7 @@ def build_quality_audit(
                 "blur_suspects": blurred,
                 "invalid_annotations_unique": invalid_unique,
                 "invalid_annotation_issues": len(invalid_rows),
+                "boundary_clipped_bbox_count": boundary_clipped,
                 "exact_duplicate_groups": exact_groups,
                 "near_duplicate_groups": near_groups,
                 "duplicate_basename_groups": basename_groups,
@@ -143,7 +145,8 @@ def build_quality_audit(
             row["dataset_name"] == dataset and row["manual_review_required"] for row in label_rows
         )
         add_queue(dataset, "CORRUPT_OR_UNREADABLE", failed, "CRITICAL", "IMAGE_SAMPLE", "QUARANTINE_AND_RECHECK_SOURCE")
-        add_queue(dataset, "INVALID_ANNOTATION", invalid_unique, "HIGH", "ANNOTATION_SCAN", "FIX_OR_EXCLUDE_INVALID_BOXES_BEFORE_TRAIN")
+        add_queue(dataset, "INVALID_ANNOTATION", invalid_unique, "HIGH", "ANNOTATION_SCAN", "REVIEW_MALFORMED_BOX_AND_EXCLUDE_ONLY_IF_NO_VISIBLE_AREA_AFTER_CLIP")
+        add_queue(dataset, "BOUNDARY_BBOX_CLIPPED", boundary_clipped, "INFO", "ANNOTATION_SCAN", "KEEP_OBJECT_AND_USE_CLIPPED_COORDINATES")
         add_queue(dataset, "EXACT_DUPLICATE", exact_groups, "HIGH", "IMAGE_SAMPLE", "KEEP_ONE_PER_CONFIRMED_DUPLICATE_GROUP")
         add_queue(dataset, "NEAR_DUPLICATE", near_groups, "MEDIUM", "IMAGE_SAMPLE", "TEMPORAL_DOWNSAMPLE_AFTER_REVIEW")
         add_queue(dataset, "BLUR_SUSPECT", blurred, "MEDIUM", "IMAGE_SAMPLE", "VISUAL_REVIEW_THEN_REJECT_OR_KEEP")

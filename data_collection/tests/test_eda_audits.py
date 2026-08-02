@@ -57,17 +57,36 @@ def test_quality_audit_creates_actionable_review_queue() -> None:
     mapping = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "vehicle_class_mapping.yaml")
     results = [
         {
-            "dataset_name": "MIO-TCD Localization",
+            "dataset_name": "UA-DETRAC Original",
             "quality_rows": [{"read_status": "OK", "blur_suspect": True}],
             "invalid_annotations": [],
             "bbox_samples": [],
-            "class_counts": {"car": 1},
+            "class_counts": {"others": 1},
         }
     ]
     summary, labels, queue = build_quality_audit(results, [], mapping)
     assert summary[0]["quality_gate"] == "REVIEW_REQUIRED"
     assert labels[0]["mapping_status"] == "DEFINED_PENDING_DATA_LEAD_APPROVAL"
     assert {row["issue_category"] for row in queue} >= {"BLUR_SUSPECT", "CLASS_POLICY_PENDING"}
+
+
+def test_boundary_clipping_is_recorded_as_keep_not_invalid() -> None:
+    mapping = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "vehicle_class_mapping.yaml")
+    results = [
+        {
+            "dataset_name": "UA-DETRAC Original",
+            "quality_rows": [],
+            "invalid_annotations": [],
+            "boundary_clipped_bbox_count": 12,
+            "bbox_samples": [],
+            "class_counts": {"car": 12},
+        }
+    ]
+    summary, _labels, queue = build_quality_audit(results, [], mapping)
+    assert summary[0]["invalid_annotations_unique"] == 0
+    assert summary[0]["boundary_clipped_bbox_count"] == 12
+    boundary = next(row for row in queue if row["issue_category"] == "BOUNDARY_BBOX_CLIPPED")
+    assert boundary["recommended_action"] == "KEEP_OBJECT_AND_USE_CLIPPED_COORDINATES"
 
 
 def test_split_audit_detects_source_file_leakage() -> None:

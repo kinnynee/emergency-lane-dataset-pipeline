@@ -60,6 +60,31 @@ def test_scene_metadata_config_uses_allowed_values() -> None:
     assert all(item["weather"] != "NIGHT" for item in assessments)
 
 
+def test_aau_lighting_is_manually_reviewed_for_all_sequences() -> None:
+    config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "aau_sequence_lighting_review.yaml")
+    sequences = config["sequences"]
+    assert len(sequences) == 22
+    counts = {value: 0 for value in ("DAY", "NIGHT", "TWILIGHT")}
+    for review in sequences.values():
+        assert review["lighting_source"] == "MANUAL_VISUAL_REVIEW_3_RGB_FRAMES"
+        assert "AUTOMATIC" not in review["lighting"]
+        counts[review["lighting"]] += 1
+    assert counts == {"DAY": 10, "NIGHT": 11, "TWILIGHT": 1}
+
+
+def test_k230_has_dedicated_backlit_map_slice() -> None:
+    policy = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "split_policy.yaml")
+    required_metrics = set(policy["paper_evaluation"]["required_slices"])
+    backlit = [
+        row
+        for row in policy["main_test"]["required_slices"]
+        if row["slice_id"] == "K230_BACKLIT"
+    ]
+    assert required_metrics == {"DAY", "NIGHT", "BACKLIT", "RAIN"}
+    assert len(backlit) == 1
+    assert backlit[0]["value"] == "BACKLIT"
+
+
 def test_traffic_density_matches_documented_thresholds() -> None:
     config = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "sequence_road_types.yaml")
     for dataset in config["assessments"].values():

@@ -32,9 +32,9 @@ Nhánh `aaurainsnow/` lặp được bỏ khỏi thống kê. Dataset có video 
 
 ## 8–10. Góc camera, điều kiện và class
 
-Viewpoint cao nhất theo rule hiện tại: **AAU RainSnow 4.20/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
+Viewpoint cao nhất theo rule hiện tại: **AAU RainSnow 4.31/5**. AAU bổ sung adverse weather; UA hỗ trợ tracking; MIO/AAU có lớp xe máy, còn UA-DETRAC không quan sát thấy xe máy trong class XML đã đọc.
 
-Cross-dataset test proposal theo road type: **HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; mapping dựa trên review ảnh đại diện và đang chờ Data Lead duyệt.
+Cross-dataset test proposal theo road type: **HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3**. Chưa có sequence được xác nhận là `EMERGENCY_LANE_LIKE`; metadata cảnh vẫn chờ Data Lead duyệt.
 
 Metadata cảnh cross-test: **camera_view: ELEVATED_OBLIQUE=10; lighting: DAY=5, NIGHT=2, TWILIGHT=3; traffic_density: HIGH=4, LOW=2, MEDIUM=4; weather: CLEAR=3, CLOUDY=2, RAIN_OR_WET_ROAD=2, UNKNOWN=3**. `weather=UNKNOWN` được giữ lại khi XML chỉ ghi `night`, vì `night` là điều kiện ánh sáng chứ không phải thời tiết. Mật độ xe được tính bằng số bbox phương tiện trung bình trên mỗi ảnh có annotation.
 
@@ -42,13 +42,13 @@ Phân bố chi tiết theo class và kích thước bbox được xuất ở `cl
 
 ## 11–12. Bounding box và resize 320×320
 
-Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU RainSnow=0.37476683, UA-DETRAC Original=0.06631237. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.
+Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU RainSnow=0.37476683, UA-DETRAC Original=0.06013477. Đây là ngưỡng phân tích ban đầu, không phải ngưỡng ground truth.
 
 ## 13–15. Chất lượng ảnh, annotation, trùng và leakage
 
-Đã kiểm tra 12,198 ảnh/frame mẫu; ghi 131,684 annotation lỗi duy nhất (141,490 issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện 0 leakage CRITICAL theo sequence metadata.
+Đã kiểm tra 12,198 ảnh/frame mẫu; ghi 1,503 annotation lỗi duy nhất (1,503 issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện 0 leakage CRITICAL theo sequence metadata.
 
-Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **1,313** bbox sample theo `vehicle_class_mapping.yaml`; các class vẫn ở trạng thái chờ Data Lead phê duyệt. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **0** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 

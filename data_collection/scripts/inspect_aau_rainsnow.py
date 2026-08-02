@@ -13,9 +13,11 @@ import cv2
 from tqdm import tqdm
 
 from external_eda_common import (
+    ROOT,
     distance_proxy,
     image_quality,
     letterbox_box_metrics,
+    load_yaml,
     perceptual_hash,
     relative_size_category,
     reservoir_sample,
@@ -24,7 +26,8 @@ from external_eda_common import (
 )
 
 DATASET = "AAU RainSnow"
-VEHICLE_CLASSES = {"bicycle", "car", "motorbike", "bus", "truck"}
+VEHICLE_CLASSES = {"car", "motorbike", "bus", "truck"}
+LIGHTING_REVIEW_PATH = ROOT / "configs" / "aau_sequence_lighting_review.yaml"
 
 
 def _canonical_files(root: Path) -> tuple[list[Path], list[Path], Counter[str]]:
@@ -45,11 +48,16 @@ def _canonical_files(root: Path) -> tuple[list[Path], list[Path], Counter[str]]:
     return images, videos, extensions
 
 
-def _video_metadata(path: Path) -> dict[str, Any]:
+def _video_metadata(
+    path: Path,
+    lighting_reviews: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    sequence_name = path.parent.name
+    review = lighting_reviews.get(sequence_name, {})
     capture = cv2.VideoCapture(str(path))
     if not capture.isOpened():
         return {
-            "sequence_name": path.parent.name,
+            "sequence_name": sequence_name,
             "video_file": str(path),
             "read_status": "UNREADABLE",
         }
@@ -72,16 +80,9 @@ def _video_metadata(path: Path) -> dict[str, Any]:
         blur.append(float(cv2.Laplacian(gray, cv2.CV_64F).var()))
     capture.release()
     mean_brightness = sum(brightness) / len(brightness) if brightness else None
-    if mean_brightness is None:
-        lighting = "UNKNOWN"
-    elif mean_brightness < 55:
-        lighting = "NIGHT_AUTOMATIC_ESTIMATE"
-    elif mean_brightness < 95:
-        lighting = "TWILIGHT_AUTOMATIC_ESTIMATE"
-    else:
-        lighting = "DAY_AUTOMATIC_ESTIMATE"
+    lighting = str(review.get("lighting", "UNKNOWN_MANUAL_REVIEW_REQUIRED"))
     return {
-        "sequence_name": path.parent.name,
+        "sequence_name": sequence_name,
         "camera_name": path.stem,
         "video_file": str(path),
         "read_status": "OK",
@@ -93,6 +94,9 @@ def _video_metadata(path: Path) -> dict[str, Any]:
         "codec": codec or "UNKNOWN",
         "camera_motion": "FIXED_FROM_DATASET_STRUCTURE",
         "lighting": lighting,
+        "lighting_source": review.get("lighting_source", "NOT_REVIEWED"),
+        "lighting_review_status": review.get("review_status", "PENDING"),
+        "lighting_evidence": review.get("evidence", ""),
         "weather": "RAIN_OR_SNOW_NOT_SEPARATED",
         "weather_source": "DATASET_IDENTITY_MANUAL_REVIEW_REQUIRED",
         "mean_brightness_sample": round(mean_brightness, 4) if mean_brightness is not None else "",
@@ -246,20 +250,33 @@ def inspect_aau(
                 }
             )
 
+    lighting_config = load_yaml(LIGHTING_REVIEW_PATH)
+    lighting_reviews = lighting_config.get("sequences", {})
     videos = [
-        _video_metadata(video)
+        _video_metadata(video, lighting_reviews)
         for video in tqdm(sorted(video_files), desc="AAU video metadata", disable=not progress)
     ]
     unique_sequences = sorted({row["sequence_name"] for row in videos})
-    lighting_counts = Counter(row.get("lighting", "UNKNOWN") for row in videos)
+    sequence_lighting = {
+        sequence: next(
+            (
+                row.get("lighting", "UNKNOWN_MANUAL_REVIEW_REQUIRED")
+                for row in videos
+                if row["sequence_name"] == sequence
+            ),
+            "UNKNOWN_MANUAL_REVIEW_REQUIRED",
+        )
+        for sequence in unique_sequences
+    }
+    lighting_counts = Counter(sequence_lighting.values())
     conditions = [
         {
             "dataset_name": DATASET,
             "condition": "lighting",
             "value": key,
             "count": value,
-            "unit": "video",
-            "assessment_source": "AUTOMATIC_ESTIMATE",
+            "unit": "sequence",
+            "assessment_source": "MANUAL_VISUAL_REVIEW_3_RGB_FRAMES_PER_SEQUENCE",
         }
         for key, value in sorted(lighting_counts.items())
     ]
@@ -314,6 +331,14 @@ def inspect_aau(
         "elapsed_seconds": round(elapsed, 3),
         "analysis_scope": "FULL_RGB_ANNOTATION_AND_IMAGE_SCAN" if full_scan else f"FULL_ANNOTATION_SAMPLE_{image_budget}_IMAGES",
         "duplicate_tree_excluded": True,
+        "lighting_reviewed_sequence_count": sum(
+            value in {"DAY", "TWILIGHT", "NIGHT", "BACKLIT"}
+            for value in sequence_lighting.values()
+        ),
+        "lighting_review_required_sequence_count": sum(
+            value not in {"DAY", "TWILIGHT", "NIGHT", "BACKLIT"}
+            for value in sequence_lighting.values()
+        ),
     }
 
 

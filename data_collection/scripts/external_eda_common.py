@@ -209,6 +209,43 @@ def validate_bbox(
     return issues
 
 
+def clip_bbox_to_image(
+    xmin: float,
+    ymin: float,
+    xmax: float,
+    ymax: float,
+    image_width: int,
+    image_height: int,
+) -> tuple[tuple[float, float, float, float], list[str]]:
+    """Clip a boundary-crossing box while recording which sides changed.
+
+    Objects entering or leaving a frame are valid training examples.  Their source
+    coordinates may cross the image boundary, so they must be clipped rather than
+    dropped.  Call ``validate_bbox`` after clipping to reject only boxes that are
+    still malformed or have no visible area.
+    """
+    if image_width <= 0 or image_height <= 0:
+        raise ValueError("Image dimensions must be positive before bbox clipping")
+
+    clipped_xmin = min(max(xmin, 0.0), float(image_width))
+    clipped_ymin = min(max(ymin, 0.0), float(image_height))
+    clipped_xmax = min(max(xmax, 0.0), float(image_width))
+    clipped_ymax = min(max(ymax, 0.0), float(image_height))
+    adjustments: list[str] = []
+    if clipped_xmin != xmin:
+        adjustments.append("LEFT_BOUNDARY_CLIPPED")
+    if clipped_ymin != ymin:
+        adjustments.append("TOP_BOUNDARY_CLIPPED")
+    if clipped_xmax != xmax:
+        adjustments.append("RIGHT_BOUNDARY_CLIPPED")
+    if clipped_ymax != ymax:
+        adjustments.append("BOTTOM_BOUNDARY_CLIPPED")
+    return (
+        (clipped_xmin, clipped_ymin, clipped_xmax, clipped_ymax),
+        adjustments,
+    )
+
+
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

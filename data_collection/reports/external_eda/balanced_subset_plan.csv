@@ -1,10 +1,10 @@
 scenario,dataset_name,target_images,available_candidates_in_analysis,proposed_images,shortfall,selection_unit,apply_status,notes
 PILOT_500,MIO-TCD Localization,170,5000,170,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
 PILOT_500,AAU RainSnow,165,2198,165,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
-PILOT_500,UA-DETRAC Original,165,67396,165,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
+PILOT_500,UA-DETRAC Original,165,67820,165,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
 DATASET_V1_1500,MIO-TCD Localization,500,5000,500,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
 DATASET_V1_1500,AAU RainSnow,500,2198,500,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
-DATASET_V1_1500,UA-DETRAC Original,500,67396,500,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
+DATASET_V1_1500,UA-DETRAC Original,500,67820,500,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
 EXTENDED,MIO-TCD Localization,1000,5000,1000,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
 EXTENDED,AAU RainSnow,1000,2198,1000,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
-EXTENDED,UA-DETRAC Original,1000,67396,1000,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.
+EXTENDED,UA-DETRAC Original,1000,67820,1000,0,sequence_then_file,PROPOSAL_ONLY,Ưu tiên sequence khác nhau; cần manual review điều kiện khó.

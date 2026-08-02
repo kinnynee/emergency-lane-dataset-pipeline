@@ -7,11 +7,12 @@ box_policy:
   annotate_all_visible_vehicles: true
   partially_cut_vehicle: "annotate_if_recognizable"
   too_small_or_uncertain: "REVIEW"
-  out_of_bounds_allowed: false
+  source_out_of_bounds_allowed: true
+  out_of_bounds_training_action: "clip_to_image_boundary_and_keep_object"
+  exclude_only_if_non_positive_after_clip: true
 negative_samples:
   keep_images_without_vehicle: true
 cross_review:
   minimum_percent: 10
   maximum_percent: 20
 class_change_requires_team_approval: true
-

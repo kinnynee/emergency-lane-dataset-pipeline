@@ -10,17 +10,22 @@ from external_eda_common import load_yaml
 from run_external_dataset_eda import _normalize_bbox_class_mapping
 
 
-def test_all_defined_classes_require_review() -> None:
+def test_supervisor_vehicle_policy_is_applied() -> None:
     mapping = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "vehicle_class_mapping.yaml")
-    for dataset in ("mio_tcd", "aau_rainsnow", "ua_detrac"):
-        assert mapping[dataset]
-        assert all(rule["review_required"] is True for rule in mapping[dataset].values())
+    assert mapping["target_class"] == "vehicle"
+    assert mapping["preserve_original_class"] is True
+    assert mapping["mio_tcd"]["motorcycle"]["include"] is True
+    assert mapping["aau_rainsnow"]["motorbike"]["mapped_class"] == "vehicle"
+    assert mapping["ua_detrac"]["others"]["include"] is True
+    assert mapping["ua_detrac"]["others"]["review_required"] is True
 
 
 def test_person_is_not_mapped_to_vehicle() -> None:
     mapping = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "vehicle_class_mapping.yaml")
     assert mapping["mio_tcd"]["pedestrian"]["mapped_class"] is None
     assert mapping["aau_rainsnow"]["person"]["mapped_class"] is None
+    assert mapping["mio_tcd"]["bicycle"]["include"] is False
+    assert mapping["aau_rainsnow"]["bicycle"]["include"] is False
 
 
 def test_cached_bbox_mapping_is_corrected_to_config() -> None:

@@ -1,0 +1,32 @@
+review_version: "1.0"
+review_date: "2026-08-02"
+dataset: "AAU RainSnow"
+review_scope: "ALL_22_SEQUENCES"
+review_method: "Manual visual review of RGB cam1.mkv frames at 10%, 50%, and 90% of each sequence"
+brightness_policy: "DIAGNOSTIC_ONLY_DO_NOT_ASSIGN_LIGHTING"
+allowed_lighting: [DAY, TWILIGHT, NIGHT, BACKLIT]
+review_status: "COMPLETED_PENDING_DATA_LEAD_APPROVAL"
+
+sequences:
+  Egensevej-1: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark sky; streetlights and vehicle lights dominate all three frames."}
+  Egensevej-2: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Overcast daytime with visible landscape and natural ambient light."}
+  Egensevej-3: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark sky and strong artificial-light reflections on wet road."}
+  Egensevej-4: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark surroundings; road lit primarily by lamps and headlights."}
+  Egensevej-5: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark sky and artificial lighting across the sequence."}
+  Hadsundvej-1: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime intersection under overcast natural light."}
+  Hadsundvej-2: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime intersection under overcast natural light."}
+  Hasserisvej-1: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime road scene with natural light and visible green vegetation."}
+  Hasserisvej-2: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime road scene with natural light and visible green vegetation."}
+  Hasserisvej-3: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime road scene with natural light and visible green vegetation."}
+  Hjorringvej-1: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Low ambient light; traffic signals and streetlights dominate."}
+  Hjorringvej-2: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Clearly visible daytime intersection under natural light."}
+  Hjorringvej-3: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark surroundings with bright traffic lights and wet-road reflections."}
+  Hjorringvej-4: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "All frames are dark and illuminated mainly by street and vehicle lights."}
+  Hobrovej-1: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark road scene illuminated by traffic signals and streetlights."}
+  Ostre-1: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime scene with natural ambient light and visible vegetation."}
+  Ostre-2: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime scene with natural ambient light despite rain."}
+  Ostre-3: {lighting: DAY, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Daytime scene with natural ambient light despite rain."}
+  Ostre-4: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Dark surroundings with headlights and streetlights reflected on wet road."}
+  Ringvej-1: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Very low ambient light; traffic signals provide most illumination."}
+  Ringvej-2: {lighting: NIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Very low ambient light; traffic signals provide most illumination."}
+  Ringvej-3: {lighting: TWILIGHT, lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES, review_status: REVIEWED, evidence: "Low but visible ambient sky light; brighter than the reviewed night sequences."}

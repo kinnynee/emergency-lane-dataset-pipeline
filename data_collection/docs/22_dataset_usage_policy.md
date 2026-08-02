@@ -5,7 +5,7 @@
 - Không chia frame cùng sequence/video vào nhiều split.
 - Không dùng bbox ảnh tĩnh để kết luận xe dừng.
 - Không dùng `STATIONARY_CANDIDATE` làm nhãn train trước khi người thật duyệt.
-- Luôn giữ `original_class`; class mapping về `vehicle` đang `PENDING_DATA_LEAD_APPROVAL`.
+- Luôn giữ `original_class`; mapping về `vehicle` đã chốt theo góp ý ngày 02/08/2026. Mọi xe cơ giới kể cả xe máy được giữ; người đi bộ và xe đạp bị loại. `UA-DETRAC:others` được giữ và tiếp tục sample review.
 - Xe máy, xe đạp, người đi bộ và lớp mơ hồ phải được quyết định riêng.
 - Không commit archive, ảnh/video hoặc contact sheet chưa bảo đảm riêng tư.
 - Không tự suy đoán license. UA-DETRAC phải tách tên dataset gốc khỏi Kaggle mirror tải xuống.
