@@ -30,6 +30,8 @@ def test_required_handoff_files_are_present() -> None:
         REPORT_ROOT / "k230_holdout_plan.csv",
         REPORT_ROOT / "evaluation_slice_readiness.csv",
         REPORT_ROOT / "ua_others_sample_review.csv",
+        REPORT_ROOT / "ua_others_stratified_review_queue.csv",
+        REPORT_ROOT / "ua_others_stratified_review_decisions.csv",
         REPORT_ROOT / "figure_provenance.csv",
     ]
 
@@ -118,3 +120,28 @@ def test_every_tracked_figure_has_verified_csv_provenance() -> None:
     assert all(row["status"] == "VERIFIED_CSV_SOURCE" for row in rows)
     assert all(row["source_csvs"] and row["source_sha256s"] for row in rows)
     assert all(len(row["figure_sha256"]) == 64 for row in rows)
+
+
+def test_ua_others_review_is_stratified_and_not_overclaimed() -> None:
+    rows = _read_csv(REPORT_ROOT / "ua_others_stratified_review_queue.csv")
+    assessments = {}
+    for row in rows:
+        assessments[row["visual_assessment"]] = assessments.get(row["visual_assessment"], 0) + 1
+
+    assert len(rows) == 60
+    assert len({row["sequence_id"] for row in rows}) >= 40
+    assert {row["boundary_status"] for row in rows} == {"BOUNDARY_CLIPPED", "IN_FRAME"}
+    assert len({row["weather"] for row in rows}) >= 4
+    assert assessments == {
+        "CONFIRMED_MOTORIZED_VEHICLE": 48,
+        "LIKELY_MOTORIZED_VEHICLE": 9,
+        "NON_VEHICLE": 2,
+        "UNDETERMINED": 1,
+    }
+    assert all("PENDING_DATA_LEAD_SIGNOFF" in row["review_status"] for row in rows)
+    assert all(row["preserve_original_class"] == "TRUE" for row in rows)
+    assert all(
+        row["include_for_training"] == "FALSE_REVIEW_REJECT"
+        for row in rows
+        if row["visual_assessment"] == "NON_VEHICLE"
+    )

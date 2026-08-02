@@ -15,6 +15,8 @@ External datasets currently in scope:
 
 EDA currently covers 12,198 sampled images and an **analysis-scope sum** of 1,301,866 bounding boxes. This is not a full-raw-data total: MIO uses a deterministic 5,000-image sample, while AAU and UA-DETRAC use broader/full annotation scopes. AAU lighting was manually reviewed for all 22 sequences (`DAY=10`, `NIGHT=11`, `TWILIGHT=1`). UA-DETRAC has 130,181 right/bottom boundary overruns that are clipped and kept; the observed at-most-one-pixel pattern is documented as a coordinate-convention hypothesis, not as proof that vehicles enter or leave the frame. The proposed cross-test set covers `HIGHWAY`, `INTERSECTION`, and `URBAN_ROAD`; `EMERGENCY_LANE_LIKE` and the dedicated K230 `BACKLIT` recording are still missing. Quality gates remain `REVIEW_REQUIRED`, so the data is not yet marked train-ready.
 
+`UA-DETRAC:others` remains provisionally mapped to `vehicle` per supervisor direction, with `original_class` preserved. A deterministic 60-sample pre-review across 48 sequences found 48 confirmed vehicles, 9 likely vehicles, 2 non-vehicles, and 1 undetermined sample. The sample-level decisions are not final until Data Lead signoff; see `ua_others_stratified_review_queue.csv`.
+
 All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is still pending collection and must remain locked from training after it is created.
 
 ## Repository map

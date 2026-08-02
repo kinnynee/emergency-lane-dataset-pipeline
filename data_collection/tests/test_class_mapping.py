@@ -18,6 +18,8 @@ def test_supervisor_vehicle_policy_is_applied() -> None:
     assert mapping["aau_rainsnow"]["motorbike"]["mapped_class"] == "vehicle"
     assert mapping["ua_detrac"]["others"]["include"] is True
     assert mapping["ua_detrac"]["others"]["review_required"] is True
+    assert "CONDITIONAL_PENDING_DATA_LEAD_SIGNOFF" in mapping["review_status"]
+    assert "60-sample stratified pre-review" in mapping["ua_detrac"]["others"]["review_note"]
 
 
 def test_person_is_not_mapped_to_vehicle() -> None:

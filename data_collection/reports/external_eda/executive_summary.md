@@ -14,6 +14,7 @@
 - Road type trong cross test proposal: **HIGHWAY=2, INTERSECTION=5, URBAN_ROAD=3**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điều kiện cross test đã review: **camera_view: ELEVATED_OBLIQUE=10; lighting: DAY=5, NIGHT=2, TWILIGHT=3; traffic_density: HIGH=4, LOW=2, MEDIUM=4; weather: CLEAR=3, CLOUDY=2, RAIN_OR_WET_ROAD=2, UNKNOWN=3**.
 - Quality gate: **REVIEW_REQUIRED=3**; bbox sample được sửa theo class mapping: **0**.
+- UA `others` pre-review phân tầng: **48 confirmed, 9 likely, 2 non-vehicle, 1 undetermined**; chờ Data Lead signoff.
 - Kiểm tra split: **PARTIAL=1, PASS=8, PENDING=2**; MIO không có sequence được giữ train-only.
 - Điểm viewpoint trung bình cao nhất: **AAU RainSnow (4.31/5, AUTOMATIC_ESTIMATE)**.
 

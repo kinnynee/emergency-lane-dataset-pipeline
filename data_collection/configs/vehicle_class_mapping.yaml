@@ -1,5 +1,5 @@
 mapping_version: "2.0"
-review_status: "APPROVED_FROM_SUPERVISOR_FEEDBACK_2026_08_02"
+review_status: "CONDITIONAL_PENDING_DATA_LEAD_SIGNOFF_2026_08_02"
 target_class: vehicle
 preserve_original_class: true
 policy: "Include all motor vehicles, including motorcycles; exclude pedestrians and bicycles."
@@ -32,5 +32,5 @@ ua_detrac:
     mapped_class: vehicle
     include: true
     review_required: true
-    review_note: "Keep as vehicle per supervisor; 12-sequence visual sample reviewed and original class retained. Continue sampling ambiguous edge cases."
+    review_note: "Keep provisionally per supervisor and preserve original class. A deterministic 60-sample stratified pre-review found 48 confirmed vehicles, 9 likely vehicles, 2 non-vehicles and 1 undetermined; Data Lead signoff and explicit sample-level rejection are required."
   van: {mapped_class: vehicle, include: true, review_required: false}

@@ -1010,6 +1010,15 @@ def _write_reports(
     class_mapping_corrections = sum(
         int(row.get("class_mapping_corrections_in_bbox_sample", 0)) for row in quality_audit
     )
+    others_review_rows = read_csv(
+        ROOT / "reports" / "external_eda" / "ua_others_stratified_review_queue.csv"
+    )
+    others_review_counts = Counter(
+        str(row.get("visual_assessment", "PENDING_REVIEW")) for row in others_review_rows
+    )
+    others_review_summary = ", ".join(
+        f"{label}={count}" for label, count in sorted(others_review_counts.items())
+    ) or "NOT_AVAILABLE"
     executive = f"""# Executive summary — External Dataset EDA
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -1027,6 +1036,7 @@ def _write_reports(
 - Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điều kiện cross test đã review: **{cross_scene_summary}**.
 - Quality gate: **{quality_gate_summary}**; bbox sample được sửa theo class mapping: **{class_mapping_corrections:,}**.
+- UA `others` pre-review phân tầng: **{others_review_summary}**; chờ Data Lead signoff.
 - Kiểm tra split: **{split_check_summary}**; MIO không có sequence được giữ train-only.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
@@ -1082,6 +1092,8 @@ Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, r
 Đã kiểm tra {total_images_checked:,} ảnh/frame mẫu; ghi {total_invalid:,} annotation lỗi duy nhất ({total_issues:,} issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện {critical_leakage:,} leakage CRITICAL theo sequence metadata.
 
 Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+
+UA `others` pre-review phân tầng: **{others_review_summary}**. Quyết định cấp mẫu nằm tại `ua_others_stratified_review_queue.csv`, vẫn cần Data Lead ký xác nhận và không được ngoại suy để khẳng định toàn bộ class đều là xe.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 

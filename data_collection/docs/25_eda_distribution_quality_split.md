@@ -6,7 +6,7 @@ Cập nhật ngày 02/08/2026 theo góp ý giảng viên. Phạm vi gồm MIO-TC
 
 Các báo cáo chính gồm `dataset_inventory.csv`, `class_distribution.csv`, `bbox_statistics.csv`, `cross_test_sequence_statistics.csv`, `class_distribution_by_scene.csv` và `bbox_distribution_by_scene.csv`.
 
-Class detection được chốt thành một lớp `vehicle`: giữ mọi xe cơ giới kể cả xe máy; bỏ người đi bộ và xe đạp. `preserve_original_class=true` để audit và có thể tính mAP riêng theo lớp gốc. `UA-DETRAC:others` được giữ, đồng thời có bảng mẫu review tại `ua_others_sample_review.csv`.
+Class detection được chốt thành một lớp `vehicle`: giữ mọi xe cơ giới kể cả xe máy; bỏ người đi bộ và xe đạp. `preserve_original_class=true` để audit và có thể tính mAP riêng theo lớp gốc. `UA-DETRAC:others` chỉ được giữ có điều kiện. Hàng đợi 60 mẫu phân tầng từ 48 sequence nằm tại `ua_others_stratified_review_queue.csv`; pre-review phát hiện 48 xe chắc chắn, 9 khả năng là xe, 2 non-vehicle và 1 chưa xác định. Hai mẫu non-vehicle bị đánh dấu loại, mẫu chưa xác định chờ review lần hai; toàn bộ quyết định vẫn cần Data Lead ký xác nhận.
 
 ## 2. Ánh sáng AAU RainSnow
 
