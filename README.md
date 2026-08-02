@@ -17,6 +17,8 @@ EDA currently covers 12,198 sampled images and an **analysis-scope sum** of 1,30
 
 `UA-DETRAC:others` remains provisionally mapped to `vehicle` per supervisor direction, with `original_class` preserved. A deterministic 60-sample pre-review across 48 sequences found 48 confirmed vehicles, 9 likely vehicles, 2 non-vehicles, and 1 undetermined sample. The sample-level decisions are not final until Data Lead signoff; see `ua_others_stratified_review_queue.csv`.
 
+`K230_BACKLIT` remains `NOT_AVAILABLE` until real elevated-camera data, reviewed ground truth, and predictions exist. The dedicated acquisition and split-lock requirements are in `data_collection/planning/k230_backlit_collection_protocol.csv`; missing data is never converted to a zero score.
+
 All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is still pending collection and must remain locked from training after it is created.
 
 ## Repository map

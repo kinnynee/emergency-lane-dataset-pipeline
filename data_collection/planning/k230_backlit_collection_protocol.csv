@@ -1,0 +1,11 @@
+protocol_id,requirement,target,acceptance_criteria,status,evidence_link,notes
+BL001,camera_geometry,ELEVATED_FIXED_K230,"Camera is mounted at the intended deployment height and angle; front-vehicle dashcam views are rejected.",PENDING_COLLECTION,,Use the same ROI definition planned for deployment.
+BL002,dedicated_sessions,2,"At least one independent BACKLIT session is mandatory; target two sessions on different times/days.",PENDING_COLLECTION,,Keep complete session boundaries and stable session IDs.
+BL003,backlight_evidence,SUN_OR_STRONG_LIGHT_FACING_CAMERA,"Contact sheet visibly shows the strong source behind/near vehicles; mean brightness alone is not accepted.",PENDING_COLLECTION,,Reviewer and review date are required.
+BL004,control_session,DAY_NON_BACKLIT,"Record a comparable normal-day session to separate backlight impact from general daylight.",PENDING_COLLECTION,,Do not relabel bright DAY frames as BACKLIT.
+BL005,scenario_coverage,MOVING_SLOW_STOPPED_NEGATIVE,"Include safe moving/slow/stopped cases and frames with no vehicle in ROI.",PENDING_COLLECTION,,Never stage a stop on an active dangerous lane.
+BL006,vehicle_coverage,CAR_AND_MOTORBIKE,"Include car and motorbike when safely available; record missing types explicitly.",PENDING_COLLECTION,,Truck/bus are optional natural occurrences.
+BL007,ground_truth,VEHICLE_BOX_AND_SESSION_METADATA,"Every evaluation frame has reviewed boxes plus session_id lighting weather camera_view road_type and ROI metadata.",PENDING_COLLECTION,,Preserve original class for per-type analysis.
+BL008,split_lock,MAIN_K230_TEST_ONLY,"Entire BACKLIT session is locked in MAIN_K230_TEST and absent from train/validation.",PENDING_COLLECTION,,Run sequence/source/hash leakage checks before evaluation.
+BL009,evaluation,mAP_BACKLIT,"Report mAP only after ground truth and model predictions exist; otherwise keep NOT_AVAILABLE.",NOT_AVAILABLE,,Never convert missing evaluation to zero.
+BL010,safety_privacy,APPROVED_SAFE_RECORDING,"Location and procedure are approved; public evidence is privacy reviewed/pixelated.",PENDING_APPROVAL,,Stop recording if traffic or equipment safety is at risk.

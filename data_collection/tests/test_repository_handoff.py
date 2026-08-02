@@ -21,6 +21,7 @@ def test_required_handoff_files_are_present() -> None:
         REPO_ROOT / "data_collection" / "README.md",
         REPO_ROOT / "data_collection" / "configs" / "split_policy.yaml",
         REPO_ROOT / "data_collection" / "configs" / "aau_sequence_lighting_review.yaml",
+        REPO_ROOT / "data_collection" / "planning" / "k230_backlit_collection_protocol.csv",
         REPO_ROOT / "data_collection" / "docs" / "21_external_dataset_eda_methodology.md",
         REPO_ROOT / "data_collection" / "docs" / "25_eda_distribution_quality_split.md",
         REPO_ROOT / "data_collection" / "docs" / "26_supervisor_feedback_corrections.md",
@@ -145,3 +146,16 @@ def test_ua_others_review_is_stratified_and_not_overclaimed() -> None:
         for row in rows
         if row["visual_assessment"] == "NON_VEHICLE"
     )
+
+
+def test_k230_backlit_protocol_cannot_fake_a_missing_score() -> None:
+    protocol = _read_csv(
+        REPO_ROOT / "data_collection" / "planning" / "k230_backlit_collection_protocol.csv"
+    )
+    evaluation = next(row for row in protocol if row["protocol_id"] == "BL009")
+    split_lock = next(row for row in protocol if row["protocol_id"] == "BL008")
+
+    assert evaluation["status"] == "NOT_AVAILABLE"
+    assert "ground truth and model predictions" in evaluation["acceptance_criteria"]
+    assert split_lock["target"] == "MAIN_K230_TEST_ONLY"
+    assert all(row["status"] != "COMPLETED" for row in protocol)

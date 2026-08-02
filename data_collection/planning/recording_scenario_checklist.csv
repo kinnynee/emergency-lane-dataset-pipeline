@@ -19,9 +19,8 @@ SC017,negative,Người đi bộ nhưng không có xe,Negative khó,none,none,an
 SC018,negative,Bóng cây hoặc vật thể gây nhiễu,Negative khó,none,none,any,any,none,any,5,1,30,0,0,MEDIUM,Không đặt vật cản trên đường,NOT_STARTED,,
 SC019,lighting,Ban ngày bình thường,Ánh sáng đều,any,any,day,clear,any,any,5,1,50,0,0,HIGH,Kiểm tra góc và nắng nóng,NOT_STARTED,,
 SC020,lighting,Ban đêm,Thiếu sáng,any,any,night,clear,any,any,5,1,50,0,0,HIGH,Có người hỗ trợ và đủ ánh sáng an toàn,NOT_STARTED,,
-SC021,lighting,Ngược sáng,Chói nắng,any,any,backlight,clear,any,any,5,1,50,0,0,HIGH,Không nhìn trực tiếp nguồn sáng,NOT_STARTED,,
+SC021,lighting,Ngược sáng,Chói nắng,any,any,backlight,clear,any,any,10,2,100,0,0,HIGH,Không nhìn trực tiếp nguồn sáng; quay session riêng bằng K230 góc cao,NOT_STARTED,,Theo planning/k230_backlit_collection_protocol.csv
 SC022,lighting,Đèn pha chiếu trực tiếp,Chói đèn ban đêm,any,any,headlight,clear,any,any,5,1,40,0,0,HIGH,Không chiếu gây nguy hiểm người lái,NOT_STARTED,,
 SC023,weather,Trời mưa,Mưa tự nhiên,any,any,any,rain,any,any,5,1,50,0,0,HIGH,Che thiết bị và dừng nếu mất an toàn,NOT_STARTED,,
 SC024,weather,Đường ướt phản sáng,Phản xạ mặt đường,any,any,any,wet_road,any,any,5,1,50,0,0,HIGH,Không tự làm ướt đường giao thông,NOT_STARTED,,
 SC025,camera,Camera rung nhẹ,Rung tự nhiên hoặc bench an toàn,any,any,any,any,any,any,3,1,30,0,0,MEDIUM,Không làm rơi thiết bị,NOT_STARTED,,
-
