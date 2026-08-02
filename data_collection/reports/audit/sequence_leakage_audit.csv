@@ -1,0 +1,6 @@
+check,dataset,status,count,severity,evidence,scope
+SEQUENCE_EXCLUSIVE,ALL,PASS,0,INFO,[],FULL_SPLIT_PROPOSAL
+SOURCE_PATH_EXCLUSIVE,ALL,PASS,0,INFO,[],TRACKED_SELECTION_MANIFEST
+EXACT_CONTENT_CROSS_SPLIT,AAU+UA,PASS,0,INFO,duplicate_cross_split_audit.csv,FULL_AAU_RGB_AND_FULL_UA_ARCHIVE
+NEAR_DUPLICATE_CROSS_SPLIT,ALL,NOT_VERIFIED,,HIGH,Production pHash scan is sampled and only compares consecutive files within a sequence.,INCOMPLETE
+MIO_EXACT_CONTENT_CROSS_SPLIT,MIO-TCD Localization,NOT_APPLICABLE,0,INFO,MIO is train-only by policy.,TRAIN_ONLY

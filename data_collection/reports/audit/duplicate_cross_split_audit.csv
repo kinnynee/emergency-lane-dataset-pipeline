@@ -1,0 +1,2 @@
+dataset,left_file,right_file,left_split,right_split,duplicate_type,hash,status,severity,notes
+AAU+UA,,,,,EXACT_CONTENT_CROSS_SPLIT,,PASS,INFO,AAU full SHA-256; UA full CRC+size with SHA-256 confirmation for candidates.

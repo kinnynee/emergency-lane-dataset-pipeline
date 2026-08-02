@@ -23,6 +23,12 @@ RADIATE là `EXCLUDED_VIEWPOINT_MISMATCH`. MIO-TCD Classification không đượ
 
 ## Cách chạy
 
+Cài đúng môi trường đã dùng để tái lập EDA:
+
+```powershell
+python -m pip install -r data_collection/requirements-data-lock.txt
+```
+
 PowerShell chạy nhanh, một dòng:
 
 ```powershell

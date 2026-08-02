@@ -1,0 +1,22 @@
+dataset,original_class,raw_count,mapped_class,included,excluded_reason,review_required,mapping_source,config_rule_present,preserve_original_class
+MIO-TCD Localization,articulated_truck,9301,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,bicycle,2260,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,bus,10598,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,car,233497,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,motorcycle,1837,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,motorized_vehicle,25845,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,non-motorized_vehicle,2350,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,pedestrian,7128,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,pickup_truck,44283,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,single_unit_truck,5741,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+MIO-TCD Localization,work_van,8709,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,bicycle,1227,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,bus,433,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,car,10024,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,motorbike,41,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,person,719,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_class_mapping.yaml,True,True
+AAU RainSnow,truck,853,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+UA-DETRAC Original,bus,105436,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+UA-DETRAC Original,car,1052408,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
+UA-DETRAC Original,others,20641,vehicle,True,,True,configs/vehicle_class_mapping.yaml,True,True
+UA-DETRAC Original,van,95570,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True

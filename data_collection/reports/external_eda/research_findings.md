@@ -18,6 +18,8 @@
 
 Inventory archive, parse annotation gốc, validation bbox, image-quality sample streaming, letterbox 320, duplicate sample, leakage theo sequence, viewpoint estimate và subset proposal. Không copy/xóa dữ liệu gốc.
 
+Tổng 1.301.866 là **analysis-scope bbox sum**, không phải tổng full raw dataset: MIO dùng sample 5.000 ảnh, còn AAU và UA-DETRAC dùng phạm vi annotation rộng hơn/toàn bộ.
+
 ## 5. MIO-TCD Localization
 
 Chỉ đọc TAR Localization; Classification bị chặn. MIO cung cấp localization ảnh tĩnh, không có Track ID và không chứng minh trạng thái dừng.
@@ -49,6 +51,8 @@ Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU Ra
 Đã kiểm tra 12,198 ảnh/frame mẫu; ghi 1,503 annotation lỗi duy nhất (1,503 issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện 0 leakage CRITICAL theo sequence metadata.
 
 Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **0** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+
+Với `UA-DETRAC:others`, 60 mẫu được chọn phân tầng từ 48 sequence. Pre-review ghi nhận 48 xe chắc chắn, 9 khả năng là xe, 2 non-vehicle và 1 chưa xác định. Các quyết định cấp mẫu nằm trong `ua_others_stratified_review_queue.csv` và vẫn cần Data Lead ký xác nhận; không dùng tỷ lệ mẫu để khẳng định toàn bộ 20.641 annotation đều là xe.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 

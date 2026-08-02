@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import traceback
@@ -32,6 +33,7 @@ from inspect_ua_detrac import inspect_ua_detrac
 from validate_split_policy import build_split_audit
 
 VERSION_DATE = "2026-08-02"
+CACHE_SCHEMA_VERSION = 2
 
 INVENTORY_FIELDS = [
     "dataset_name", "version_or_download_date", "source_path", "status", "data_type",
@@ -69,7 +71,7 @@ VIEWPOINT_FIELDS = [
     "assessment_source", "manual_review_status", "notes",
 ]
 DUPLICATE_FIELDS = [
-    "duplicate_group_id", "dataset_name", "sequence_name", "file_path", "duplicate_type",
+    "duplicate_group_id", "dataset_name", "sequence_name", "proposed_split", "file_path", "duplicate_type",
     "similarity_score", "recommended_keep", "recommended_action", "review_status",
 ]
 LEAKAGE_FIELDS = [
@@ -91,22 +93,123 @@ DATASET_MAPPING_KEYS = {
 }
 
 
+def _portable_report_path(value: str | Path) -> str:
+    path = Path(value)
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return f"<EXTERNAL_DATA_ROOT>/{path.name}"
+
+
 def _ratio(numerator: int, denominator: int) -> float | str:
     return round(numerator / denominator, 8) if denominator else ""
 
 
-def _save_cache(path: Path, result: dict[str, Any]) -> None:
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_stat_signature(path: Path) -> dict[str, Any]:
+    """Create a cheap source identity without hashing multi-gigabyte media."""
+
+    resolved = path.resolve()
+    if resolved.is_file():
+        stat = resolved.stat()
+        return {
+            "kind": "FILE",
+            "path": str(resolved),
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+        }
+    digest = hashlib.sha256()
+    file_count = 0
+    total_bytes = 0
+    for item in sorted((entry for entry in resolved.rglob("*") if entry.is_file())):
+        stat = item.stat()
+        relative = item.relative_to(resolved).as_posix()
+        digest.update(f"{relative}\0{stat.st_size}\0{stat.st_mtime_ns}\n".encode("utf-8"))
+        file_count += 1
+        total_bytes += stat.st_size
+    return {
+        "kind": "DIRECTORY",
+        "path": str(resolved),
+        "file_count": file_count,
+        "total_bytes": total_bytes,
+        "tree_stat_sha256": digest.hexdigest(),
+    }
+
+
+def _cache_identity(
+    dataset_key: str,
+    source_path: Path,
+    inspector: Any,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    inspector_module = sys.modules[inspector.__module__]
+    code_paths = [
+        Path(__file__).resolve(),
+        Path(inspector_module.__file__).resolve(),
+        (ROOT / "scripts" / "external_eda_common.py").resolve(),
+    ]
+    config_paths = sorted((ROOT / "configs").glob("*.yaml"))
+    payload = {
+        "cache_schema_version": CACHE_SCHEMA_VERSION,
+        "dataset_key": dataset_key,
+        "source": _source_stat_signature(source_path),
+        "options": {
+            "sample_size": int(args.sample_size),
+            "full_scan": bool(args.full_scan),
+            "skip_images": bool(args.skip_images),
+        },
+        "code_sha256": {path.name: _sha256_file(path) for path in code_paths},
+        "config_sha256": {path.name: _sha256_file(path) for path in config_paths},
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+    }
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "fingerprint": hashlib.sha256(serialized.encode("utf-8")).hexdigest(),
+        "payload": payload,
+    }
+
+
+def _save_cache(
+    path: Path,
+    result: dict[str, Any],
+    identity: dict[str, Any] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+    content: dict[str, Any]
+    if identity is None:
+        content = result
+    else:
+        content = {
+            "cache_schema_version": CACHE_SCHEMA_VERSION,
+            "fingerprint": identity["fingerprint"],
+            "identity": identity["payload"],
+            "result": result,
+        }
+    path.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
 
 
-def _load_cache(path: Path) -> dict[str, Any] | None:
+def _load_cache(
+    path: Path,
+    expected_identity: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        content = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    if "result" not in content or "fingerprint" not in content:
+        return content if expected_identity is None else None
+    if expected_identity is not None and content["fingerprint"] != expected_identity["fingerprint"]:
+        return None
+    return content["result"]
 
 
 def _summary_numeric(rows: list[dict[str, Any]], field: str) -> dict[str, Any]:
@@ -136,7 +239,7 @@ def _inventory(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "dataset_name": result["dataset_name"],
                 "version_or_download_date": VERSION_DATE,
-                "source_path": result.get("path", ""),
+                "source_path": _portable_report_path(result.get("path", "")) if result.get("path") else "",
                 "status": result.get("status", "UNKNOWN"),
                 "data_type": result.get("data_type", ""),
                 "image_count": result.get("image_count", 0),
@@ -428,6 +531,38 @@ def _gap_rows() -> list[dict[str, Any]]:
     return rows
 
 
+def _boxes_per_image_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        distribution = Counter(int(value) for value in result.get("boxes_per_image", {}).values())
+        for boxes_per_image, image_count in sorted(distribution.items()):
+            rows.append(
+                {
+                    "dataset_name": result["dataset_name"],
+                    "boxes_per_image": boxes_per_image,
+                    "image_count": image_count,
+                    "analysis_scope": result.get("analysis_scope", ""),
+                }
+            )
+    return rows
+
+
+def _ua_annotation_attribute_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ua = next(
+        (result for result in results if result["dataset_name"] == "UA-DETRAC Original"),
+        {},
+    )
+    analyzed = int(ua.get("bbox_analyzed_count", 0))
+    occluded = int(ua.get("occluded_bbox_count", 0))
+    truncated = int(ua.get("truncated_bbox_count", 0))
+    return [
+        {"metric": "OCCLUDED", "count": occluded, "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "NOT_MARKED_OCCLUDED", "count": max(0, analyzed - occluded), "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "TRUNCATED", "count": truncated, "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "NOT_TRUNCATED", "count": max(0, analyzed - truncated), "analysis_scope": ua.get("analysis_scope", "")},
+    ]
+
+
 def _apply_scene_metadata(
     splits: list[dict[str, Any]],
     manifest: list[dict[str, Any]],
@@ -602,7 +737,8 @@ def _figures(
     viewpoints: list[dict[str, Any]],
     plans: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
-    results: list[dict[str, Any]],
+    boxes_per_image_distribution: list[dict[str, Any]],
+    ua_annotation_attributes: list[dict[str, Any]],
 ) -> list[Path]:
     figures = output / "figures"
     figures.mkdir(parents=True, exist_ok=True)
@@ -637,11 +773,15 @@ def _figures(
     categories = ["EXTREMELY_TINY", "VERY_SMALL", "SMALL", "USABLE"]
     category_counts = Counter(row.get("box_320_category", "") for row in bbox_samples)
     _bar("Tỷ lệ tiny/small/usable box trong mẫu", "Số box", categories, [category_counts[key] for key in categories], destination(14, "bbox_320_categories"))
-    all_counts = [int(value) for result in results for value in result.get("boxes_per_image", {}).values()]
+    all_counts = [
+        int(row["boxes_per_image"])
+        for row in boxes_per_image_distribution
+        for _ in range(int(row["image_count"]))
+    ]
     _hist("Số box mỗi ảnh/frame", "Số box", [float(value) for value in all_counts], destination(15, "boxes_per_image"))
-    ua = next((result for result in results if result["dataset_name"] == "UA-DETRAC Original"), {})
-    _bar("Occlusion UA-DETRAC", "Số box", ["Occluded", "Not marked occluded"], [float(ua.get("occluded_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("occluded_bbox_count", 0)))], destination(16, "ua_occlusion"))
-    _bar("Truncation UA-DETRAC", "Số box", ["Truncated", "Not truncated"], [float(ua.get("truncated_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("truncated_bbox_count", 0)))], destination(17, "ua_truncation"))
+    ua_metrics = {str(row["metric"]): int(row["count"]) for row in ua_annotation_attributes}
+    _bar("Occlusion UA-DETRAC", "Số box", ["Occluded", "Not marked occluded"], [float(ua_metrics.get("OCCLUDED", 0)), float(ua_metrics.get("NOT_MARKED_OCCLUDED", 0))], destination(16, "ua_occlusion"))
+    _bar("Truncation UA-DETRAC", "Số box", ["Truncated", "Not truncated"], [float(ua_metrics.get("TRUNCATED", 0)), float(ua_metrics.get("NOT_TRUNCATED", 0))], destination(17, "ua_truncation"))
     vp = defaultdict(list)
     for row in viewpoints:
         if row["dataset_name"] != "RADIATE":
@@ -729,6 +869,66 @@ def _audit_figures(
     return created
 
 
+FIGURE_CSV_SOURCES = {
+    "01_images_by_dataset.png": ["dataset_inventory.csv"],
+    "02_videos_sequences_by_dataset.png": ["dataset_inventory.csv"],
+    "03_bboxes_by_dataset.png": ["dataset_inventory.csv"],
+    "04_original_class_distribution.png": ["class_distribution.csv"],
+    "05_mapped_class_distribution.png": ["class_distribution.csv"],
+    "06_lighting_distribution.png": ["condition_distribution.csv"],
+    "07_weather_distribution.png": ["condition_distribution.csv"],
+    "08_brightness_distribution.png": ["image_quality_samples.csv"],
+    "09_blur_distribution.png": ["image_quality_samples.csv"],
+    "10_resolution_distribution.png": ["image_quality_samples.csv"],
+    "11_bbox_area_ratio.png": ["bbox_samples.csv"],
+    "12_bbox_width_320.png": ["bbox_samples.csv"],
+    "13_bbox_height_320.png": ["bbox_samples.csv"],
+    "14_bbox_320_categories.png": ["bbox_samples.csv"],
+    "15_boxes_per_image.png": ["boxes_per_image_distribution.csv"],
+    "16_ua_occlusion.png": ["ua_annotation_attribute_summary.csv"],
+    "17_ua_truncation.png": ["ua_annotation_attribute_summary.csv"],
+    "18_viewpoint_score.png": ["viewpoint_suitability.csv"],
+    "19_selection_ratio.png": ["balanced_subset_plan.csv"],
+    "20_data_gaps.png": ["dataset_gap_analysis.csv"],
+    "21_cross_test_bbox_difficulty.png": ["cross_test_sequence_statistics.csv"],
+    "22_quality_issue_counts.png": ["quality_audit_summary.csv"],
+    "23_split_sequence_distribution.png": ["split_distribution.csv"],
+}
+
+
+def _write_figure_provenance(output: Path, figures: list[Path]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for figure in figures:
+        source_names = FIGURE_CSV_SOURCES.get(figure.name, [])
+        source_paths = [output / name for name in source_names]
+        available = bool(source_paths) and all(path.is_file() for path in source_paths)
+        rows.append(
+            {
+                "figure_path": figure.relative_to(output).as_posix(),
+                "figure_sha256": _sha256_file(figure) if figure.is_file() else "",
+                "source_csvs": ";".join(source_names),
+                "source_sha256s": ";".join(
+                    f"{path.name}:{_sha256_file(path)}" for path in source_paths if path.is_file()
+                ),
+                "generator": "run_external_dataset_eda.py",
+                "status": "VERIFIED_CSV_SOURCE" if available else "MISSING_SOURCE_DECLARATION",
+            }
+        )
+    write_csv(
+        output / "figure_provenance.csv",
+        rows,
+        [
+            "figure_path",
+            "figure_sha256",
+            "source_csvs",
+            "source_sha256s",
+            "generator",
+            "status",
+        ],
+    )
+    return rows
+
+
 def _write_reports(
     output: Path,
     inventory: list[dict[str, Any]],
@@ -747,6 +947,11 @@ def _write_reports(
     total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
     total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
     total_boxes_checked = sum(int(result.get("bbox_analyzed_count", 0)) for result in results)
+    bbox_scope_summary = "; ".join(
+        f"{row['dataset_name']}={row.get('analysis_scope') or 'NOT_DECLARED'}"
+        for row in inventory
+        if row.get("status") == "ANALYZED"
+    ) or "NOT_AVAILABLE"
     total_invalid = sum(
         len(
             {
@@ -813,6 +1018,15 @@ def _write_reports(
     class_mapping_corrections = sum(
         int(row.get("class_mapping_corrections_in_bbox_sample", 0)) for row in quality_audit
     )
+    others_review_rows = read_csv(
+        ROOT / "reports" / "external_eda" / "ua_others_stratified_review_queue.csv"
+    )
+    others_review_counts = Counter(
+        str(row.get("visual_assessment", "PENDING_REVIEW")) for row in others_review_rows
+    )
+    others_review_summary = ", ".join(
+        f"{label}={count}" for label, count in sorted(others_review_counts.items())
+    ) or "NOT_AVAILABLE"
     executive = f"""# Executive summary — External Dataset EDA
 
 - Ngày chạy: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -822,13 +1036,15 @@ def _write_reports(
 - RADIATE: `EXCLUDED_VIEWPOINT_MISMATCH`, không chạy EDA.
 - Ảnh/frame kiểm tra chất lượng thật: **{total_images_checked:,}**.
 - Annotation rows đọc: **{total_annotations:,}**.
-- Bounding box kiểm tra/phân tích: **{total_boxes_checked:,}**.
+- Tổng bounding box trong phạm vi EDA: **{total_boxes_checked:,}** (không phải full-raw total).
+- Phạm vi bbox theo dataset: **{bbox_scope_summary}**.
 - Annotation lỗi duy nhất: **{total_invalid:,}**; tổng issue: **{total_issues:,}**.
 - Nhóm trùng/nghi gần trùng trên mẫu: **{duplicate_groups:,}**.
 - Leakage mức CRITICAL: **{critical_leakage:,}**.
 - Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điều kiện cross test đã review: **{cross_scene_summary}**.
 - Quality gate: **{quality_gate_summary}**; bbox sample được sửa theo class mapping: **{class_mapping_corrections:,}**.
+- UA `others` pre-review phân tầng: **{others_review_summary}**; chờ Data Lead signoff.
 - Kiểm tra split: **{split_check_summary}**; MIO không có sequence được giữ train-only.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
@@ -885,6 +1101,8 @@ Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, r
 
 Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
+UA `others` pre-review phân tầng: **{others_review_summary}**. Quyết định cấp mẫu nằm tại `ua_others_stratified_review_queue.csv`, vẫn cần Data Lead ký xác nhận và không được ngoại suy để khẳng định toàn bộ class đều là xe.
+
 ## 16–17. Vehicle detection và giới hạn xe dừng
 
 Ba bộ hỗ trợ nhận diện phương tiện. Không bộ nào có ground-truth xe dừng trong ROI. Không được kết luận xe dừng từ một ảnh.
@@ -925,7 +1143,8 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Số ảnh đã kiểm tra: {total_images_checked:,}
 - Số video/sequence đã kiểm tra: {sum(int(row["video_count"]) + int(row["sequence_count"]) for row in inventory):,}
 - Số annotation đã đọc: {total_annotations:,}
-- Số bounding box đã phân tích: {total_boxes_checked:,}
+- Tổng bounding box trong phạm vi EDA: {total_boxes_checked:,} (không phải full-raw total)
+- Phạm vi bbox theo dataset: {bbox_scope_summary}
 - Số annotation lỗi duy nhất: {total_invalid:,}
 - Tổng số issue annotation: {total_issues:,}
 - Số nhóm ảnh nghi ngờ trùng: {duplicate_groups:,}
@@ -1029,11 +1248,14 @@ def run(args: argparse.Namespace) -> int:
             )
             continue
         cache_path = cache_dir / f"{key}_{'full' if args.full_scan else f'sample_{args.sample_size}'}.json"
-        cached = _load_cache(cache_path) if args.resume else None
+        cache_identity = _cache_identity(key, path, inspector, args)
+        cached = _load_cache(cache_path, cache_identity) if args.resume else None
         if cached:
             print(f"Resume: dùng cache {cache_path}")
             results.append(cached)
             continue
+        if args.resume and cache_path.exists():
+            print(f"Resume: stale cache rejected (fingerprint mismatch) {cache_path}")
         try:
             result = inspector(
                 path,
@@ -1043,7 +1265,7 @@ def run(args: argparse.Namespace) -> int:
                 progress=True,
             )
             results.append(result)
-            _save_cache(cache_path, result)
+            _save_cache(cache_path, result, cache_identity)
         except Exception as error:  # tiếp tục bước độc lập theo prompt
             serious_errors.append(f"{dataset_name}: {error}")
             log_lines.append(traceback.format_exc())
@@ -1086,9 +1308,19 @@ def run(args: argparse.Namespace) -> int:
     bbox_stats, bbox_samples = _bbox_statistics(analyzed)
     conditions = [row for result in analyzed for row in result.get("conditions", [])]
     viewpoints = assess_viewpoints(analyzed)
-    duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
-    leakage = detect_leakage(analyzed)
     plans, manifest, splits = create_plan(analyzed, split_policy)
+    split_by_sequence: dict[tuple[str, str], str] = {}
+    for row in splits:
+        dataset_name = str(row["dataset_name"])
+        proposed = str(row["proposed_split"])
+        split_by_sequence[(dataset_name, str(row["sequence_id"]))] = proposed
+        split_by_sequence[(dataset_name, str(row.get("source_sequence_id", "")))] = proposed
+    duplicates = (
+        []
+        if args.skip_duplicates
+        else detect_duplicates(analyzed, split_by_sequence)
+    )
+    leakage = detect_leakage(analyzed)
     road_type_distribution, scene_distribution = _apply_scene_metadata(
         splits, manifest, road_type_config
     )
@@ -1110,6 +1342,8 @@ def run(args: argparse.Namespace) -> int:
         row for result in analyzed for row in result.get("boundary_clip_samples", [])
     ]
     stationary = [row for result in analyzed for row in result.get("stationary_candidates", [])]
+    boxes_per_image_distribution = _boxes_per_image_rows(analyzed)
+    ua_annotation_attributes = _ua_annotation_attribute_rows(analyzed)
 
     write_csv(output / "dataset_inventory.csv", inventory, INVENTORY_FIELDS)
     write_csv(output / "dataset_comparison.csv", comparison, list(comparison[0]) if comparison else ["dataset_name"])
@@ -1214,13 +1448,39 @@ def run(args: argparse.Namespace) -> int:
             "manual_review_status",
         ],
     )
+    write_csv(
+        output / "boxes_per_image_distribution.csv",
+        boxes_per_image_distribution,
+        ["dataset_name", "boxes_per_image", "image_count", "analysis_scope"],
+    )
+    write_csv(
+        output / "ua_annotation_attribute_summary.csv",
+        ua_annotation_attributes,
+        ["metric", "count", "analysis_scope"],
+    )
     figures = _figures(
-        output, inventory, class_rows, quality_samples, bbox_samples, bbox_stats,
-        conditions, viewpoints, plans, gaps, analyzed,
+        output,
+        read_csv(output / "dataset_inventory.csv"),
+        read_csv(output / "class_distribution.csv"),
+        read_csv(output / "image_quality_samples.csv"),
+        read_csv(output / "bbox_samples.csv"),
+        read_csv(output / "bbox_statistics.csv"),
+        read_csv(output / "condition_distribution.csv"),
+        read_csv(output / "viewpoint_suitability.csv"),
+        read_csv(output / "balanced_subset_plan.csv"),
+        read_csv(output / "dataset_gap_analysis.csv"),
+        read_csv(output / "boxes_per_image_distribution.csv"),
+        read_csv(output / "ua_annotation_attribute_summary.csv"),
     )
     figures.extend(
-        _audit_figures(output, cross_sequence_stats, quality_audit, split_distribution)
+        _audit_figures(
+            output,
+            read_csv(output / "cross_test_sequence_statistics.csv"),
+            read_csv(output / "quality_audit_summary.csv"),
+            read_csv(output / "split_distribution.csv"),
+        )
     )
+    _write_figure_provenance(output, figures)
     contact_paths: list[str] = []
     contact_root = ROOT / "storage_placeholders" / "online_data" / "contact_sheets" / "external_eda"
     if not args.skip_contact_sheets:
@@ -1239,7 +1499,7 @@ def run(args: argparse.Namespace) -> int:
             else "NOT_GENERATED",
             "output_location": next(
                 (
-                    path
+                    _portable_report_path(path)
                     for path in contact_paths
                     if result["dataset_name"].lower().replace(" ", "_").replace("-", "_") in Path(path).stem
                 ),
@@ -1274,7 +1534,7 @@ def run(args: argparse.Namespace) -> int:
     print(output)
     print(f"Analyzed datasets: {len(analyzed)}/3")
     print(f"Files/images checked: {sum(int(row['files_processed_successfully']) for row in inventory)}")
-    print(f"Bounding boxes analyzed: {sum(int(row['bbox_analyzed_count']) for row in inventory)}")
+    print(f"Analysis-scope bounding boxes: {sum(int(row['bbox_analyzed_count']) for row in inventory)}")
     unique_invalid = {
         (str(row.get("dataset_name", "")), str(row.get("source_file", "")), str(row.get("annotation_id", "")))
         for row in invalid

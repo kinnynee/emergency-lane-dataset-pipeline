@@ -13,7 +13,11 @@ External datasets currently in scope:
 - **UA-DETRAC**: elevated traffic-camera sequences; proposed sequence split is 71 train / 21 validation / 8 cross-test sequences.
 - **RADIATE is excluded** because its forward-facing camera viewpoint does not match the elevated K230 deployment viewpoint.
 
-EDA currently covers 12,198 sampled images and 1,301,866 valid/analyzed bounding boxes. AAU lighting was manually reviewed for all 22 sequences (`DAY=10`, `NIGHT=11`, `TWILIGHT=1`). UA-DETRAC has 130,181 boundary-crossing boxes that are clipped and kept, with zero remaining invalid UA annotations. The proposed cross-test set covers `HIGHWAY`, `INTERSECTION`, and `URBAN_ROAD`; `EMERGENCY_LANE_LIKE` and the dedicated K230 `BACKLIT` recording are still missing. Quality gates remain `REVIEW_REQUIRED`, so the data is not yet marked train-ready.
+EDA currently covers 12,198 sampled images and an **analysis-scope sum** of 1,301,866 bounding boxes. This is not a full-raw-data total: MIO uses a deterministic 5,000-image sample, while AAU and UA-DETRAC use broader/full annotation scopes. AAU lighting was manually reviewed for all 22 sequences (`DAY=10`, `NIGHT=11`, `TWILIGHT=1`). UA-DETRAC has 130,181 right/bottom boundary overruns that are clipped and kept; the observed at-most-one-pixel pattern is documented as a coordinate-convention hypothesis, not as proof that vehicles enter or leave the frame. The proposed cross-test set covers `HIGHWAY`, `INTERSECTION`, and `URBAN_ROAD`; `EMERGENCY_LANE_LIKE` and the dedicated K230 `BACKLIT` recording are still missing. Quality gates remain `REVIEW_REQUIRED`, so the data is not yet marked train-ready.
+
+`UA-DETRAC:others` remains provisionally mapped to `vehicle` per supervisor direction, with `original_class` preserved. A deterministic 60-sample pre-review across 48 sequences found 48 confirmed vehicles, 9 likely vehicles, 2 non-vehicles, and 1 undetermined sample. The sample-level decisions are not final until Data Lead signoff; see `ua_others_stratified_review_queue.csv`.
+
+`K230_BACKLIT` remains `NOT_AVAILABLE` until real elevated-camera data, reviewed ground truth, and predictions exist. The dedicated acquisition and split-lock requirements are in `data_collection/planning/k230_backlit_collection_protocol.csv`; missing data is never converted to a zero score.
 
 All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is still pending collection and must remain locked from training after it is created.
 
@@ -35,9 +39,11 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 Tests and tracked summary reports do not require the large local datasets:
 
 ```powershell
-python -m pip install -r data_collection/requirements-data.txt
+python -m pip install -r data_collection/requirements-data-lock.txt
 python -m pytest data_collection/tests -q
 ```
+
+`requirements-data-lock.txt` ghi đúng phiên bản môi trường Windows/Python 3.12 đã dùng cho lần EDA được kiểm chứng. File requirements dạng khoảng phiên bản vẫn dùng cho phát triển; tái lập báo cáo nghiên cứu nên dùng lock.
 
 ## Reproduce the full EDA
 

@@ -1,0 +1,6 @@
+run_id,sample_size,resume,output_directory,exit_code,wall_seconds,datasets_analyzed,files_images_checked,bboxes_analyzed,invalid_annotations_unique,duplicate_groups,critical_leakage,cache_reused_count,files_before,files_after,changed_after_rerun,notes
+PROD-100-FRESH,100,false,reports/audit_reproduction/eda_sample_100,0,56.0,3/3,446,1275041,1503,15,0,0,,,,"Fresh output directory; no old production cache used."
+PROD-100-RESUME,100,true,reports/audit_reproduction/eda_sample_100,0,5.505,3/3,446,1275041,1503,15,0,3,62,62,1,"Only executive_summary.md changed because it embeds the run timestamp; counts did not duplicate."
+PROD-5000-FRESH,5000,false,reports/audit_reproduction/eda_sample_5000,0,145.2,3/3,12344,1301866,1503,3333,0,0,,,,"Fresh output directory; exactly reproduced the reported mixed-scope bbox total."
+PROD-5000-RESUME,5000,true,reports/audit_reproduction/eda_sample_5000,0,6.692,3/3,12344,1301866,1503,3333,0,3,61,61,1,"Only executive_summary.md changed because it embeds the run timestamp; all three dataset caches were reused."
+FULL-SCAN,all,n/a,not_run,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,"Not run: 277,874 still images plus AAU videos would add substantial I/O without changing the already full UA/AAU annotation counts; required sample-5000 and independent full annotation audits completed."

@@ -1,0 +1,26 @@
+metric,value,scope,notes
+sequence_count,100,FULL_UA_RAW_XML,Independent audit
+image_count,140131,FULL_UA_RAW_XML,Independent audit
+frame_count,138252,FULL_UA_RAW_XML,Independent audit
+track_count,8289,FULL_UA_RAW_XML,Independent audit
+raw_box_count,1274055,FULL_UA_RAW_XML,Independent audit
+out_of_bounds_count,130181,FULL_UA_RAW_XML,Independent audit
+fully_outside,0,FULL_UA_RAW_XML,Independent audit
+invalid_count,0,FULL_UA_RAW_XML,Independent audit
+post_clip_under_2px,0,FULL_UA_RAW_XML,Independent audit
+overrun_min,0.05,FULL_UA_RAW_XML,Independent audit
+overrun_median,1.0,FULL_UA_RAW_XML,Independent audit
+overrun_p95,1.0,FULL_UA_RAW_XML,Independent audit
+overrun_max,1.0,FULL_UA_RAW_XML,Independent audit
+retained_min,0.89506821,FULL_UA_RAW_XML,Independent audit
+retained_p05,0.97584,FULL_UA_RAW_XML,Independent audit
+retained_median,0.989702,FULL_UA_RAW_XML,Independent audit
+retained_max,0.99942922,FULL_UA_RAW_XML,Independent audit
+side_LEFT,0,FULL_UA_RAW_XML,Independent audit
+side_TOP,0,FULL_UA_RAW_XML,Independent audit
+side_RIGHT,79522,FULL_UA_RAW_XML,Independent audit
+side_BOTTOM,60465,FULL_UA_RAW_XML,Independent audit
+severity_CLIP_MINOR,130178,FULL_UA_RAW_XML,Independent audit
+severity_CLIP_MODERATE,3,FULL_UA_RAW_XML,Independent audit
+severity_CLIP_SEVERE,0,FULL_UA_RAW_XML,Independent audit
+severity_FULLY_OUTSIDE,0,FULL_UA_RAW_XML,Independent audit

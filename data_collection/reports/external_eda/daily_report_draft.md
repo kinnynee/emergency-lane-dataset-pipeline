@@ -9,7 +9,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Số ảnh đã kiểm tra: 12,198
 - Số video/sequence đã kiểm tra: 166
 - Số annotation đã đọc: 1,638,901
-- Số bounding box đã phân tích: 1,301,866
+- Tổng bounding box trong phạm vi EDA: 1,301,866; không phải full-raw total vì phạm vi mỗi dataset khác nhau.
 - Số annotation lỗi duy nhất: 1,503
 - Tổng số issue annotation: 1,503
 - Số nhóm ảnh nghi ngờ trùng: 3,333

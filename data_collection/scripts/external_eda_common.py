@@ -219,10 +219,10 @@ def clip_bbox_to_image(
 ) -> tuple[tuple[float, float, float, float], list[str]]:
     """Clip a boundary-crossing box while recording which sides changed.
 
-    Objects entering or leaving a frame are valid training examples.  Their source
-    coordinates may cross the image boundary, so they must be clipped rather than
-    dropped.  Call ``validate_bbox`` after clipping to reject only boxes that are
-    still malformed or have no visible area.
+    Boundary-crossing coordinates may reflect truncation or a source coordinate
+    convention. Clip them rather than assuming a semantic cause or dropping the
+    object. Call ``validate_bbox`` after clipping to reject only boxes that remain
+    malformed or have no visible area.
     """
     if image_width <= 0 or image_height <= 0:
         raise ValueError("Image dimensions must be positive before bbox clipping")

@@ -1,5 +1,5 @@
 dataset_name,contact_sheet_type,status,output_location,privacy_status,notes
-MIO-TCD Localization,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,C:\UMTLab\k230\data_collection\storage_placeholders\online_data\contact_sheets\external_eda\mio_tcd_localization_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
-AAU RainSnow,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,C:\UMTLab\k230\data_collection\storage_placeholders\online_data\contact_sheets\external_eda\aau_rainsnow_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
-UA-DETRAC Original,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,C:\UMTLab\k230\data_collection\storage_placeholders\online_data\contact_sheets\external_eda\ua_detrac_original_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
+MIO-TCD Localization,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,storage_placeholders/online_data/contact_sheets/external_eda/mio_tcd_localization_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
+AAU RainSnow,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,storage_placeholders/online_data/contact_sheets/external_eda/aau_rainsnow_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
+UA-DETRAC Original,DATASET_REPRESENTATIVE,GENERATED_PIXELLATED_OUTSIDE_GIT,storage_placeholders/online_data/contact_sheets/external_eda/ua_detrac_original_pixelated.jpg,WHOLE_IMAGE_PIXELATED,Không commit contact sheet; chỉ dùng review cục bộ.
 ALL,CONDITION_AND_ERROR_SPECIFIC,PENDING_MANUAL_PRIVACY_AND_CONDITION_REVIEW,,NOT_EXPORTED,Không tự gán weather/day/night hoặc lỗi nhãn khi bằng chứng chưa đủ.

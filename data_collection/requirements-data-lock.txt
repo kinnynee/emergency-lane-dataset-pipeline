@@ -1,0 +1,8 @@
+# Reproduction lock tested on Windows 11 / Python 3.12.10 on 2026-08-02.
+matplotlib==3.11.1
+numpy==2.4.6
+opencv-python==4.13.0.92
+Pillow==12.3.0
+PyYAML==6.0.3
+tqdm==4.70.0
+pytest==9.1.1

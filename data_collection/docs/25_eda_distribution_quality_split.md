@@ -6,7 +6,7 @@ Cập nhật ngày 02/08/2026 theo góp ý giảng viên. Phạm vi gồm MIO-TC
 
 Các báo cáo chính gồm `dataset_inventory.csv`, `class_distribution.csv`, `bbox_statistics.csv`, `cross_test_sequence_statistics.csv`, `class_distribution_by_scene.csv` và `bbox_distribution_by_scene.csv`.
 
-Class detection được chốt thành một lớp `vehicle`: giữ mọi xe cơ giới kể cả xe máy; bỏ người đi bộ và xe đạp. `preserve_original_class=true` để audit và có thể tính mAP riêng theo lớp gốc. `UA-DETRAC:others` được giữ, đồng thời có bảng mẫu review tại `ua_others_sample_review.csv`.
+Class detection được chốt thành một lớp `vehicle`: giữ mọi xe cơ giới kể cả xe máy; bỏ người đi bộ và xe đạp. `preserve_original_class=true` để audit và có thể tính mAP riêng theo lớp gốc. `UA-DETRAC:others` chỉ được giữ có điều kiện. Hàng đợi 60 mẫu phân tầng từ 48 sequence nằm tại `ua_others_stratified_review_queue.csv`; pre-review phát hiện 48 xe chắc chắn, 9 khả năng là xe, 2 non-vehicle và 1 chưa xác định. Hai mẫu non-vehicle bị đánh dấu loại, mẫu chưa xác định chờ review lần hai; toàn bộ quyết định vẫn cần Data Lead ký xác nhận.
 
 ## 2. Ánh sáng AAU RainSnow
 
@@ -16,12 +16,14 @@ Không dùng độ sáng trung bình để gán `DAY/NIGHT`. Độ sáng chỉ c
 
 ## 3. Bounding box UA-DETRAC
 
-Box vượt biên ở xe đang đi vào hoặc ra khỏi khung hình là annotation hợp lệ, không phải nhãn lỗi. Pipeline hiện:
+Audit độc lập xác nhận 130.181 box vượt biên đều nằm ở cạnh phải và/hoặc cạnh dưới, mức vượt tối đa 1 pixel. Mẫu hình này phù hợp với giả thuyết khác quy ước tọa độ/off-by-one; chưa có đủ bằng chứng để kết luận nguyên nhân là xe đang đi vào hoặc ra khỏi khung hình. Đây là trường hợp cần chuẩn hóa tọa độ, không phải lý do để xóa annotation. Pipeline hiện:
 
 1. Giữ tọa độ gốc để truy vết.
 2. Clip box về `[0, width] × [0, height]`.
 3. Giữ đối tượng và dùng box đã clip để tạo label train.
 4. Chỉ loại box malformed hoặc không còn diện tích nhìn thấy sau clip.
+
+Con số 1.301.866 phải được ghi là **tổng box trong phạm vi EDA**: MIO dùng sample 5.000 ảnh, còn AAU và UA-DETRAC dùng phạm vi annotation rộng hơn/toàn bộ. Không trình bày con số này như tổng box của toàn bộ raw dataset.
 
 `boundary_clipped_bbox_count` được báo cáo riêng; không cộng các box này vào `invalid_annotations_unique`. Không được dùng hướng dẫn cũ “lọc box lỗi trước train”.
 
