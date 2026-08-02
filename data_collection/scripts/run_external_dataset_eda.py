@@ -93,6 +93,14 @@ DATASET_MAPPING_KEYS = {
 }
 
 
+def _portable_report_path(value: str | Path) -> str:
+    path = Path(value)
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return f"<EXTERNAL_DATA_ROOT>/{path.name}"
+
+
 def _ratio(numerator: int, denominator: int) -> float | str:
     return round(numerator / denominator, 8) if denominator else ""
 
@@ -231,7 +239,7 @@ def _inventory(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "dataset_name": result["dataset_name"],
                 "version_or_download_date": VERSION_DATE,
-                "source_path": result.get("path", ""),
+                "source_path": _portable_report_path(result.get("path", "")) if result.get("path") else "",
                 "status": result.get("status", "UNKNOWN"),
                 "data_type": result.get("data_type", ""),
                 "image_count": result.get("image_count", 0),
@@ -1491,7 +1499,7 @@ def run(args: argparse.Namespace) -> int:
             else "NOT_GENERATED",
             "output_location": next(
                 (
-                    path
+                    _portable_report_path(path)
                     for path in contact_paths
                     if result["dataset_name"].lower().replace(" ", "_").replace("-", "_") in Path(path).stem
                 ),

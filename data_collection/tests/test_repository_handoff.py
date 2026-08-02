@@ -171,3 +171,15 @@ def test_reproduction_dependencies_are_exactly_locked() -> None:
     assert requirements
     assert all("==" in requirement for requirement in requirements)
     assert not any(">=" in requirement or "<=" in requirement for requirement in requirements)
+
+
+def test_tracked_reports_do_not_expose_machine_absolute_paths() -> None:
+    report_files = list(REPORT_ROOT.glob("*.csv")) + list(REPORT_ROOT.glob("*.md"))
+    report_files.append(REPO_ROOT / "data_collection" / "reports" / "near_duplicate_frame_report.md")
+    offenders = [
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in report_files
+        if "C:\\UMTLab\\k230" in path.read_text(encoding="utf-8", errors="ignore")
+    ]
+
+    assert not offenders, f"Machine-specific paths remain in tracked reports: {offenders}"
