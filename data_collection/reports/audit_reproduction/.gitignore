@@ -1,0 +1,6 @@
+# Full production reproductions are intentionally local: they contain caches,
+# machine-specific paths, figures, and large row-level CSV artifacts.
+eda_sample_100/
+eda_sample_5000/
+contact_sheets/
+*.log

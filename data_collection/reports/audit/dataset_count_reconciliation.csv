@@ -1,0 +1,4 @@
+dataset,raw_box_count,parsed_box_count,valid_before_clip,out_of_bounds_count,clipped_count,excluded_count,invalid_count,final_analysis_count,conservation_ok,scope_note
+MIO-TCD Localization,351549,351549,351544,0,0,11738,5,16017,True,DETERMINISTIC_SAMPLE_5000_IMAGES
+AAU RainSnow,13297,13297,11794,0,0,1230,1503,11794,True,FULL_RAW_ANNOTATION
+UA-DETRAC Original,1274055,1274055,1274055,130181,130181,0,0,1274055,True,FULL_RAW_ANNOTATION
