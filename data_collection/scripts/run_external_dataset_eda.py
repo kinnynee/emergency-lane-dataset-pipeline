@@ -273,13 +273,18 @@ def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[
         for original_class, count in sorted(result.get("class_counts", {}).items()):
             rule = mapping_rows.get(original_class, {})
             requires_review = rule.get("review_required", True)
+            track_exclusions = rule.get("track_exclusions", [])
             rows.append(
                 {
                     "dataset_name": result["dataset_name"],
                     "original_class": original_class,
                     "count": count,
                     "mapped_class": rule.get("mapped_class", ""),
-                    "include_for_training": rule.get("include", ""),
+                    "include_for_training": (
+                        "TRUE_WITH_TRACK_EXCLUSION"
+                        if rule.get("include") and track_exclusions
+                        else rule.get("include", "")
+                    ),
                     "reason": rule.get("review_note", "SUPERVISOR_CLASS_POLICY_2026_08_02"),
                     "manual_review_required": requires_review,
                     "mapping_status": (
@@ -287,6 +292,8 @@ def _class_rows(results: list[dict[str, Any]], mapping: dict[str, Any]) -> list[
                         if original_class not in mapping_rows
                         else "DEFINED_REVIEW_REQUIRED"
                         if requires_review
+                        else "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION"
+                        if track_exclusions
                         else "APPROVED"
                     ),
                 }
@@ -1044,7 +1051,7 @@ def _write_reports(
 - Road type trong cross test proposal: **{cross_road_summary}**; `EMERGENCY_LANE_LIKE=0` nếu không xuất hiện.
 - Điều kiện cross test đã review: **{cross_scene_summary}**.
 - Quality gate: **{quality_gate_summary}**; bbox sample được sửa theo class mapping: **{class_mapping_corrections:,}**.
-- UA `others` pre-review phân tầng: **{others_review_summary}**; chờ Data Lead signoff.
+- UA `others` Data Lead review: **{others_review_summary}**; approved with mandatory exclusion of `MVI_40172 / track 79` (201 boxes).
 - Kiểm tra split: **{split_check_summary}**; MIO không có sequence được giữ train-only.
 - Điểm viewpoint trung bình cao nhất: **{most_relevant[0]} ({most_relevant[1]:.2f}/5, AUTOMATIC_ESTIMATE)**.
 
@@ -1099,9 +1106,9 @@ Tỷ lệ box dưới 8 px theo dataset: {", ".join(f"{name}={rate}" for name, r
 
 Đã kiểm tra {total_images_checked:,} ảnh/frame mẫu; ghi {total_invalid:,} annotation lỗi duy nhất ({total_issues:,} issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện {critical_leakage:,} leakage CRITICAL theo sequence metadata.
 
-Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+Quality gate hiện tại: **{quality_gate_summary}**. Pipeline đã sửa **{class_mapping_corrections:,}** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; Data Lead đã hoàn tất review `UA-DETRAC:others`. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
-UA `others` pre-review phân tầng: **{others_review_summary}**. Quyết định cấp mẫu nằm tại `ua_others_stratified_review_queue.csv`, vẫn cần Data Lead ký xác nhận và không được ngoại suy để khẳng định toàn bộ class đều là xe.
+UA `others` Data Lead review: **{others_review_summary}**. Review đã phủ đủ 74 unique track: giữ 73 track xe và loại toàn bộ 201 box của `MVI_40172 / track 79` theo `ua_others_track_exclusions.csv`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 
@@ -1160,7 +1167,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Link commit/PR: commit hiện tại {git_commit()}
 
 3. Vướng mắc/cần hỗ trợ:
-- Class mapping đã chốt: CÓ; chỉ `UA-DETRAC:others` tiếp tục sample review và luôn giữ original class.
+- Class mapping đã chốt: CÓ; `UA-DETRAC:others` đã review đủ 74 track, giữ 73 track xe, loại 201 box của 1 track non-vehicle và luôn giữ original class.
 - Dữ liệu chưa có nhãn detection: KHÔNG; AAU có COCO instance annotation, nhưng điều kiện theo sequence cần review.
 - Dataset quá lớn: CÓ; image quality chạy theo sample/streaming.
 - Thiếu dung lượng: KHÔNG XÁC NHẬN LÀ VƯỚNG MẮC.
@@ -1169,7 +1176,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 
 4. Ngày mai:
 - Review các ảnh lỗi.
-- Tiếp tục sample review class `UA-DETRAC:others`.
+- Khi export nhãn train, áp dụng danh sách loại toàn bộ `MVI_40172 / track 79` gồm 201 box.
 - Chốt subset cân bằng.
 - Chuẩn bị dữ liệu gán nhãn còn thiếu.
 - Tiếp tục khảo sát dữ liệu K230 thực tế.

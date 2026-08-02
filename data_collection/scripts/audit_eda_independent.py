@@ -715,6 +715,7 @@ def class_mapping_rows(
         for original_class, count in sorted(result["class_counts"].items()):
             rule = rules.get(original_class)
             included = bool(rule and rule.get("include"))
+            track_exclusions = (rule or {}).get("track_exclusions", [])
             rows.append(
                 {
                     "dataset": result["dataset"],
@@ -722,7 +723,13 @@ def class_mapping_rows(
                     "raw_count": count,
                     "mapped_class": (rule or {}).get("mapped_class", ""),
                     "included": included,
-                    "excluded_reason": "" if included else "NON_MOTORIZED_OR_UNMAPPED",
+                    "excluded_reason": (
+                        "TRACK_EXCLUSIONS_APPLY"
+                        if included and track_exclusions
+                        else ""
+                        if included
+                        else "NON_MOTORIZED_OR_UNMAPPED"
+                    ),
                     "review_required": (rule or {}).get("review_required", True),
                     "mapping_source": "configs/vehicle_class_mapping.yaml",
                     "config_rule_present": rule is not None,

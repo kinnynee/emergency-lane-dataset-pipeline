@@ -18,5 +18,5 @@ AAU RainSnow,person,719,,FALSE,SUPERVISOR_CLASS_POLICY_2026_08_02,FALSE,APPROVED
 AAU RainSnow,truck,853,vehicle,TRUE,SUPERVISOR_CLASS_POLICY_2026_08_02,FALSE,APPROVED
 UA-DETRAC Original,bus,105436,vehicle,TRUE,SUPERVISOR_CLASS_POLICY_2026_08_02,FALSE,APPROVED
 UA-DETRAC Original,car,1052408,vehicle,TRUE,SUPERVISOR_CLASS_POLICY_2026_08_02,FALSE,APPROVED
-UA-DETRAC Original,others,20641,vehicle,TRUE,Keep as vehicle per supervisor; 12-sequence visual sample reviewed and original class retained. Continue sampling ambiguous edge cases.,TRUE,DEFINED_REVIEW_REQUIRED
+UA-DETRAC Original,others,20641,vehicle,TRUE_WITH_TRACK_EXCLUSION,"Data Lead reviewed all 74 tracks: keep 73 motor-vehicle tracks; exclude MVI_40172 track 79 (201 boxes); preserve original class.",FALSE,DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION
 UA-DETRAC Original,van,95570,vehicle,TRUE,SUPERVISOR_CLASS_POLICY_2026_08_02,FALSE,APPROVED

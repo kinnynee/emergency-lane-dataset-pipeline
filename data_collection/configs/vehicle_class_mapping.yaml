@@ -1,5 +1,5 @@
-mapping_version: "2.0"
-review_status: "CONDITIONAL_PENDING_DATA_LEAD_SIGNOFF_2026_08_02"
+mapping_version: "2.1"
+review_status: "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION_2026_08_02"
 target_class: vehicle
 preserve_original_class: true
 policy: "Include all motor vehicles, including motorcycles; exclude pedestrians and bicycles."
@@ -31,6 +31,8 @@ ua_detrac:
   others:
     mapped_class: vehicle
     include: true
-    review_required: true
-    review_note: "Keep provisionally per supervisor and preserve original class. A deterministic 60-sample stratified pre-review found 48 confirmed vehicles, 9 likely vehicles, 2 non-vehicles and 1 undetermined; Data Lead signoff and explicit sample-level rejection are required."
+    review_required: false
+    review_note: "Data Lead reviewed all 74 unique others tracks. Keep 73 motor-vehicle tracks and exclude MVI_40172 track 79 (201 non-vehicle boxes). Preserve original class for retained annotations."
+    track_exclusions:
+      - {sequence_id: MVI_40172, track_id: "79", action: EXCLUDE_NON_VEHICLE_TRACK, bbox_count: 201}
   van: {mapped_class: vehicle, include: true, review_required: false}

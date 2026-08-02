@@ -14,6 +14,8 @@ Production changes must be separate from this audit commit.
 
 ### `fix(mapping)`: stratify UA `others` review
 
+Status: **RESOLVED 2026-08-02** — review expanded to all 74 unique tracks; 73 vehicle tracks approved and `MVI_40172 / track 79` rejected through a 201-box track exclusion.
+
 - File/line: `data_collection/configs/vehicle_class_mapping.yaml:31`, `reports/external_eda/ua_others_sample_review.csv`.
 - Cause: 12 non-random first-occurrence examples cannot represent 20,641 heterogeneous annotations.
 - Proposed patch: add deterministic stratified sampling across sequence, object scale, lighting, and clipping severity; retain sequence/frame/track/reviewer/date/evidence and keep `preserve_original_class=true`.

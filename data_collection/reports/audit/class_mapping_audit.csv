@@ -18,5 +18,5 @@ AAU RainSnow,person,719,,False,NON_MOTORIZED_OR_UNMAPPED,False,configs/vehicle_c
 AAU RainSnow,truck,853,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
 UA-DETRAC Original,bus,105436,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
 UA-DETRAC Original,car,1052408,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True
-UA-DETRAC Original,others,20641,vehicle,True,,True,configs/vehicle_class_mapping.yaml,True,True
+UA-DETRAC Original,others,20641,vehicle,True,EXCLUDE_MVI_40172_TRACK_79_201_BOXES,False,configs/vehicle_class_mapping.yaml,True,True
 UA-DETRAC Original,van,95570,vehicle,True,,False,configs/vehicle_class_mapping.yaml,True,True

@@ -124,6 +124,8 @@ def build_quality_audit(
                 status = "UNMAPPED_CLASS_REVIEW_REQUIRED"
             elif rule.get("review_required", True):
                 status = "DEFINED_PENDING_DATA_LEAD_APPROVAL"
+            elif rule.get("track_exclusions"):
+                status = "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION"
             else:
                 status = "APPROVED"
             label_rows.append(
@@ -132,7 +134,11 @@ def build_quality_audit(
                     "original_class": original_class,
                     "reported_annotation_count": reported_count,
                     "configured_mapped_class": (rule or {}).get("mapped_class", ""),
-                    "configured_include": (rule or {}).get("include", ""),
+                    "configured_include": (
+                        "TRUE_WITH_TRACK_EXCLUSION"
+                        if (rule or {}).get("include") and (rule or {}).get("track_exclusions")
+                        else (rule or {}).get("include", "")
+                    ),
                     "bbox_sample_count": len(samples),
                     "source_mapped_values": "|".join(source_values),
                     "corrected_bbox_sample_count": corrections,

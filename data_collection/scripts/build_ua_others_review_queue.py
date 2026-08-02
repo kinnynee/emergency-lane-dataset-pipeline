@@ -296,12 +296,17 @@ def build_queue(
             sample_id = f"UA_OTHERS_STRAT_{index:03d}"
             decision = decisions.get(sample_id, {})
             assessment = decision.get("visual_assessment", "PENDING_REVIEW")
+            review_status = decision.get("review_status", "PENDING_MANUAL_REVIEW")
             if assessment == "NON_VEHICLE":
                 training_decision = "FALSE_REVIEW_REJECT"
             elif assessment == "UNDETERMINED":
                 training_decision = "FALSE_PENDING_SECOND_REVIEW"
             elif assessment in {"CONFIRMED_MOTORIZED_VEHICLE", "LIKELY_MOTORIZED_VEHICLE"}:
-                training_decision = "TRUE_WITH_CAUTION"
+                training_decision = (
+                    "TRUE_DATA_LEAD_APPROVED"
+                    if review_status == "DATA_LEAD_SIGNOFF_COMPLETED"
+                    else "TRUE_WITH_CAUTION"
+                )
             else:
                 training_decision = "PENDING_REVIEW"
             rows.append(
@@ -316,7 +321,7 @@ def build_queue(
                     "preserve_original_class": True,
                     "reviewer": decision.get("reviewer", ""),
                     "review_date": decision.get("review_date", ""),
-                    "review_status": decision.get("review_status", "PENDING_MANUAL_REVIEW"),
+                    "review_status": review_status,
                     "evidence_path": f"{page_root}/ua_others_stratified_page_{page_number:02d}.jpg",
                     "notes": decision.get("notes", "Do not use this sample alone to approve all UA others annotations."),
                     "clipped_xyxy": candidate["clipped_xyxy"],

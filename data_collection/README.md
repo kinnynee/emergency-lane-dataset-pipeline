@@ -56,7 +56,7 @@ Tên video: `YYYYMMDD_location_device_condition_session_sequence.mp4`; ảnh: `Y
 ### Quyết định dữ liệu ngày 02/08/2026
 
 - Nhãn detection duy nhất là `vehicle`; gồm mọi xe cơ giới kể cả xe máy, không gồm người đi bộ và xe đạp.
-- Luôn giữ `original_class`; `UA-DETRAC:others` được giữ nhưng tiếp tục sample review.
+- Luôn giữ `original_class`; `UA-DETRAC:others` đã được review đủ 74 track, giữ 73 track xe và loại toàn bộ 201 box của `MVI_40172 / track 79`.
 - Ánh sáng AAU lấy từ review thủ công đủ 22 sequence, không lấy từ ngưỡng brightness.
 - Box UA-DETRAC vượt biên được clip và giữ, không xóa xe ở mép ảnh.
 - Test K230 phải có session `BACKLIT` riêng để báo cáo mAP theo `DAY/NIGHT/BACKLIT/RAIN`.

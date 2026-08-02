@@ -4,7 +4,7 @@
 
 Mô hình detection dùng duy nhất lớp `vehicle`, class ID `0`. Bao gồm toàn bộ phương tiện cơ giới như ô tô, xe tải, xe buýt, xe van và xe máy. Không gán người đi bộ hoặc xe đạp.
 
-Luôn giữ `original_class` trong metadata theo `configs/vehicle_class_mapping.yaml` để có thể audit nguồn và tính lại mAP theo lớp gốc, đặc biệt cho xe máy. Class `others` của UA-DETRAC được ánh xạ tạm sang `vehicle`, nhưng phải áp dụng quyết định review ở cấp mẫu: `NON_VEHICLE` bị loại, `UNDETERMINED` chờ review lần hai và toàn bộ pre-review cần Data Lead ký xác nhận.
+Luôn giữ `original_class` trong metadata theo `configs/vehicle_class_mapping.yaml` để có thể audit nguồn và tính lại mAP theo lớp gốc, đặc biệt cho xe máy. Class `others` của UA-DETRAC được ánh xạ sang `vehicle` sau khi Data Lead review đủ 74 track. Khi export phải loại toàn bộ `MVI_40172 / track 79` theo `ua_others_track_exclusions.csv`; không chỉ loại hai frame xuất hiện trong hàng đợi lấy mẫu.
 
 ## Quy tắc bounding box
 

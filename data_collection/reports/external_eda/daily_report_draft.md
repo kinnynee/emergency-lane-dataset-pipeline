@@ -25,7 +25,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Link commit/PR: commit hiện tại f5c943a517139f43dbd3db2aa6f6db8eef9ab8d2
 
 3. Vướng mắc/cần hỗ trợ:
-- Class mapping đã chốt: CÓ; chỉ `UA-DETRAC:others` tiếp tục sample review và luôn giữ original class.
+- Class mapping đã chốt: CÓ; `UA-DETRAC:others` đã review đủ 74 track, duyệt 73 track xe và loại toàn bộ 201 box của 1 track non-vehicle; luôn giữ original class.
 - Dữ liệu chưa có nhãn detection: KHÔNG; AAU có COCO instance annotation, nhưng điều kiện theo sequence cần review.
 - Dataset quá lớn: CÓ; image quality chạy theo sample/streaming.
 - Thiếu dung lượng: KHÔNG XÁC NHẬN LÀ VƯỚNG MẮC.
@@ -34,7 +34,7 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 
 4. Ngày mai:
 - Review các ảnh lỗi.
-- Tiếp tục sample review class `UA-DETRAC:others`.
+- Khi export nhãn train, áp dụng danh sách loại toàn bộ `MVI_40172 / track 79` gồm 201 box.
 - Chốt subset cân bằng.
 - Chuẩn bị dữ liệu gán nhãn còn thiếu.
 - Tiếp tục khảo sát dữ liệu K230 thực tế.

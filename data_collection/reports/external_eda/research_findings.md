@@ -50,9 +50,9 @@ Tỷ lệ box dưới 8 px theo dataset: MIO-TCD Localization=0.13741649, AAU Ra
 
 Đã kiểm tra 12,198 ảnh/frame mẫu; ghi 1,503 annotation lỗi duy nhất (1,503 issue). Duplicate scan chỉ áp dụng trên mẫu đã đọc ảnh. Phát hiện 0 leakage CRITICAL theo sequence metadata.
 
-Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **0** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; chỉ `UA-DETRAC:others` tiếp tục được lấy mẫu review. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
+Quality gate hiện tại: **REVIEW_REQUIRED=3**. Pipeline đã sửa **0** bbox sample theo `vehicle_class_mapping.yaml`. Class policy đã chốt; Data Lead đã hoàn tất review `UA-DETRAC:others`. Hàng đợi hành động nằm tại `quality_review_queue.csv`.
 
-Với `UA-DETRAC:others`, 60 mẫu được chọn phân tầng từ 48 sequence. Pre-review ghi nhận 48 xe chắc chắn, 9 khả năng là xe, 2 non-vehicle và 1 chưa xác định. Các quyết định cấp mẫu nằm trong `ua_others_stratified_review_queue.csv` và vẫn cần Data Lead ký xác nhận; không dùng tỷ lệ mẫu để khẳng định toàn bộ 20.641 annotation đều là xe.
+Với `UA-DETRAC:others`, Data Lead đã review đủ 74 unique track thay vì chỉ ngoại suy từ 60 frame phân tầng. Kết quả có 73 track xe cơ giới và 1 track non-vehicle (`MVI_40172 / track 79`, 201 box). Mapping `others → vehicle` được duyệt với điều kiện exporter áp dụng `ua_others_track_exclusions.csv` và vẫn giữ `original_class`.
 
 ## 16–17. Vehicle detection và giới hạn xe dừng
 

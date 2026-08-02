@@ -17,9 +17,18 @@ def test_supervisor_vehicle_policy_is_applied() -> None:
     assert mapping["mio_tcd"]["motorcycle"]["include"] is True
     assert mapping["aau_rainsnow"]["motorbike"]["mapped_class"] == "vehicle"
     assert mapping["ua_detrac"]["others"]["include"] is True
-    assert mapping["ua_detrac"]["others"]["review_required"] is True
-    assert "CONDITIONAL_PENDING_DATA_LEAD_SIGNOFF" in mapping["review_status"]
-    assert "60-sample stratified pre-review" in mapping["ua_detrac"]["others"]["review_note"]
+    others = mapping["ua_detrac"]["others"]
+    assert others["review_required"] is False
+    assert "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION" in mapping["review_status"]
+    assert "all 74 unique others tracks" in others["review_note"]
+    assert others["track_exclusions"] == [
+        {
+            "sequence_id": "MVI_40172",
+            "track_id": "79",
+            "action": "EXCLUDE_NON_VEHICLE_TRACK",
+            "bbox_count": 201,
+        }
+    ]
 
 
 def test_person_is_not_mapped_to_vehicle() -> None:

@@ -67,8 +67,8 @@ def test_quality_audit_creates_actionable_review_queue() -> None:
     ]
     summary, labels, queue = build_quality_audit(results, [], mapping)
     assert summary[0]["quality_gate"] == "REVIEW_REQUIRED"
-    assert labels[0]["mapping_status"] == "DEFINED_PENDING_DATA_LEAD_APPROVAL"
-    assert {row["issue_category"] for row in queue} >= {"BLUR_SUSPECT", "CLASS_POLICY_PENDING"}
+    assert labels[0]["mapping_status"] == "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION"
+    assert {row["issue_category"] for row in queue} == {"BLUR_SUSPECT"}
 
 
 def test_boundary_clipping_is_recorded_as_keep_not_invalid() -> None:

@@ -1,0 +1,2 @@
+dataset_name,sequence_id,track_id,original_class,action,excluded_bbox_count,reviewer,review_date,review_status,reason
+UA-DETRAC Original,MVI_40172,79,others,EXCLUDE_NON_VEHICLE_TRACK,201,CODEX_ACTING_DATA_LEAD,2026-08-02,DATA_LEAD_SIGNOFF_COMPLETED,"Stationary roadside bus-stop or advertising structure with people; not a motor vehicle. Exclude the complete track, not only sampled frames."

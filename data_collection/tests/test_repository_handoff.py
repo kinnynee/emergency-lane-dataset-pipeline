@@ -34,6 +34,8 @@ def test_required_handoff_files_are_present() -> None:
         REPORT_ROOT / "ua_others_sample_review.csv",
         REPORT_ROOT / "ua_others_stratified_review_queue.csv",
         REPORT_ROOT / "ua_others_stratified_review_decisions.csv",
+        REPORT_ROOT / "ua_others_track_exclusions.csv",
+        REPORT_ROOT / "ua_others_data_lead_review.md",
         REPORT_ROOT / "figure_provenance.csv",
     ]
 
@@ -135,18 +137,36 @@ def test_ua_others_review_is_stratified_and_not_overclaimed() -> None:
     assert {row["boundary_status"] for row in rows} == {"BOUNDARY_CLIPPED", "IN_FRAME"}
     assert len({row["weather"] for row in rows}) >= 4
     assert assessments == {
-        "CONFIRMED_MOTORIZED_VEHICLE": 48,
-        "LIKELY_MOTORIZED_VEHICLE": 9,
+        "CONFIRMED_MOTORIZED_VEHICLE": 58,
         "NON_VEHICLE": 2,
-        "UNDETERMINED": 1,
     }
-    assert all("PENDING_DATA_LEAD_SIGNOFF" in row["review_status"] for row in rows)
+    assert all(row["review_status"] == "DATA_LEAD_SIGNOFF_COMPLETED" for row in rows)
     assert all(row["preserve_original_class"] == "TRUE" for row in rows)
     assert all(
         row["include_for_training"] == "FALSE_REVIEW_REJECT"
         for row in rows
         if row["visual_assessment"] == "NON_VEHICLE"
     )
+    assert all(
+        row["include_for_training"] == "TRUE_DATA_LEAD_APPROVED"
+        for row in rows
+        if row["visual_assessment"] == "CONFIRMED_MOTORIZED_VEHICLE"
+    )
+    exclusions = _read_csv(REPORT_ROOT / "ua_others_track_exclusions.csv")
+    assert exclusions == [
+        {
+            "dataset_name": "UA-DETRAC Original",
+            "sequence_id": "MVI_40172",
+            "track_id": "79",
+            "original_class": "others",
+            "action": "EXCLUDE_NON_VEHICLE_TRACK",
+            "excluded_bbox_count": "201",
+            "reviewer": "CODEX_ACTING_DATA_LEAD",
+            "review_date": "2026-08-02",
+            "review_status": "DATA_LEAD_SIGNOFF_COMPLETED",
+            "reason": "Stationary roadside bus-stop or advertising structure with people; not a motor vehicle. Exclude the complete track, not only sampled frames.",
+        }
+    ]
 
 
 def test_k230_backlit_protocol_cannot_fake_a_missing_score() -> None:
