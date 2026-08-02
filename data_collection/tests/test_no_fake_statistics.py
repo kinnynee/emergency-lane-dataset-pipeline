@@ -68,6 +68,19 @@ def test_resume_cache_reuses_completed_result(tmp_path: Path) -> None:
     assert runner._load_cache(cache) == expected
 
 
+def test_resume_cache_rejects_stale_fingerprint(tmp_path: Path) -> None:
+    cache = tmp_path / "result.json"
+    expected = {"dataset_name": "UA-DETRAC Original", "status": "ANALYZED"}
+    first_identity = {"fingerprint": "first", "payload": {"source": "version-1"}}
+    second_identity = {"fingerprint": "second", "payload": {"source": "version-2"}}
+
+    runner._save_cache(cache, expected, first_identity)
+
+    assert runner._load_cache(cache, first_identity) == expected
+    assert runner._load_cache(cache, second_identity) is None
+    assert runner._load_cache(cache) == expected
+
+
 def test_aau_without_annotations_does_not_create_fake_error(tmp_path: Path) -> None:
     payload = {"images": [], "annotations": [], "categories": []}
     (tmp_path / "aauRainSnow-rgb.json").write_text(

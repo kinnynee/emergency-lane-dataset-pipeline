@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import traceback
@@ -32,6 +33,7 @@ from inspect_ua_detrac import inspect_ua_detrac
 from validate_split_policy import build_split_audit
 
 VERSION_DATE = "2026-08-02"
+CACHE_SCHEMA_VERSION = 2
 
 INVENTORY_FIELDS = [
     "dataset_name", "version_or_download_date", "source_path", "status", "data_type",
@@ -95,18 +97,111 @@ def _ratio(numerator: int, denominator: int) -> float | str:
     return round(numerator / denominator, 8) if denominator else ""
 
 
-def _save_cache(path: Path, result: dict[str, Any]) -> None:
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_stat_signature(path: Path) -> dict[str, Any]:
+    """Create a cheap source identity without hashing multi-gigabyte media."""
+
+    resolved = path.resolve()
+    if resolved.is_file():
+        stat = resolved.stat()
+        return {
+            "kind": "FILE",
+            "path": str(resolved),
+            "size": stat.st_size,
+            "mtime_ns": stat.st_mtime_ns,
+        }
+    digest = hashlib.sha256()
+    file_count = 0
+    total_bytes = 0
+    for item in sorted((entry for entry in resolved.rglob("*") if entry.is_file())):
+        stat = item.stat()
+        relative = item.relative_to(resolved).as_posix()
+        digest.update(f"{relative}\0{stat.st_size}\0{stat.st_mtime_ns}\n".encode("utf-8"))
+        file_count += 1
+        total_bytes += stat.st_size
+    return {
+        "kind": "DIRECTORY",
+        "path": str(resolved),
+        "file_count": file_count,
+        "total_bytes": total_bytes,
+        "tree_stat_sha256": digest.hexdigest(),
+    }
+
+
+def _cache_identity(
+    dataset_key: str,
+    source_path: Path,
+    inspector: Any,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    inspector_module = sys.modules[inspector.__module__]
+    code_paths = [
+        Path(__file__).resolve(),
+        Path(inspector_module.__file__).resolve(),
+        (ROOT / "scripts" / "external_eda_common.py").resolve(),
+    ]
+    config_paths = sorted((ROOT / "configs").glob("*.yaml"))
+    payload = {
+        "cache_schema_version": CACHE_SCHEMA_VERSION,
+        "dataset_key": dataset_key,
+        "source": _source_stat_signature(source_path),
+        "options": {
+            "sample_size": int(args.sample_size),
+            "full_scan": bool(args.full_scan),
+            "skip_images": bool(args.skip_images),
+        },
+        "code_sha256": {path.name: _sha256_file(path) for path in code_paths},
+        "config_sha256": {path.name: _sha256_file(path) for path in config_paths},
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+    }
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "fingerprint": hashlib.sha256(serialized.encode("utf-8")).hexdigest(),
+        "payload": payload,
+    }
+
+
+def _save_cache(
+    path: Path,
+    result: dict[str, Any],
+    identity: dict[str, Any] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+    content: dict[str, Any]
+    if identity is None:
+        content = result
+    else:
+        content = {
+            "cache_schema_version": CACHE_SCHEMA_VERSION,
+            "fingerprint": identity["fingerprint"],
+            "identity": identity["payload"],
+            "result": result,
+        }
+    path.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
 
 
-def _load_cache(path: Path) -> dict[str, Any] | None:
+def _load_cache(
+    path: Path,
+    expected_identity: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        content = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    if "result" not in content or "fingerprint" not in content:
+        return content if expected_identity is None else None
+    if expected_identity is not None and content["fingerprint"] != expected_identity["fingerprint"]:
+        return None
+    return content["result"]
 
 
 def _summary_numeric(rows: list[dict[str, Any]], field: str) -> dict[str, Any]:
@@ -1036,11 +1131,14 @@ def run(args: argparse.Namespace) -> int:
             )
             continue
         cache_path = cache_dir / f"{key}_{'full' if args.full_scan else f'sample_{args.sample_size}'}.json"
-        cached = _load_cache(cache_path) if args.resume else None
+        cache_identity = _cache_identity(key, path, inspector, args)
+        cached = _load_cache(cache_path, cache_identity) if args.resume else None
         if cached:
             print(f"Resume: dùng cache {cache_path}")
             results.append(cached)
             continue
+        if args.resume and cache_path.exists():
+            print(f"Resume: bỏ cache cũ/không khớp fingerprint {cache_path}")
         try:
             result = inspector(
                 path,
@@ -1050,7 +1148,7 @@ def run(args: argparse.Namespace) -> int:
                 progress=True,
             )
             results.append(result)
-            _save_cache(cache_path, result)
+            _save_cache(cache_path, result, cache_identity)
         except Exception as error:  # tiếp tục bước độc lập theo prompt
             serious_errors.append(f"{dataset_name}: {error}")
             log_lines.append(traceback.format_exc())
