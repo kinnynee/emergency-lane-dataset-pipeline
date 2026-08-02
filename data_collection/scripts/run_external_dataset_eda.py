@@ -71,7 +71,7 @@ VIEWPOINT_FIELDS = [
     "assessment_source", "manual_review_status", "notes",
 ]
 DUPLICATE_FIELDS = [
-    "duplicate_group_id", "dataset_name", "sequence_name", "file_path", "duplicate_type",
+    "duplicate_group_id", "dataset_name", "sequence_name", "proposed_split", "file_path", "duplicate_type",
     "similarity_score", "recommended_keep", "recommended_action", "review_status",
 ]
 LEAKAGE_FIELDS = [
@@ -1300,9 +1300,19 @@ def run(args: argparse.Namespace) -> int:
     bbox_stats, bbox_samples = _bbox_statistics(analyzed)
     conditions = [row for result in analyzed for row in result.get("conditions", [])]
     viewpoints = assess_viewpoints(analyzed)
-    duplicates = [] if args.skip_duplicates else detect_duplicates(analyzed)
-    leakage = detect_leakage(analyzed)
     plans, manifest, splits = create_plan(analyzed, split_policy)
+    split_by_sequence: dict[tuple[str, str], str] = {}
+    for row in splits:
+        dataset_name = str(row["dataset_name"])
+        proposed = str(row["proposed_split"])
+        split_by_sequence[(dataset_name, str(row["sequence_id"]))] = proposed
+        split_by_sequence[(dataset_name, str(row.get("source_sequence_id", "")))] = proposed
+    duplicates = (
+        []
+        if args.skip_duplicates
+        else detect_duplicates(analyzed, split_by_sequence)
+    )
+    leakage = detect_leakage(analyzed)
     road_type_distribution, scene_distribution = _apply_scene_metadata(
         splits, manifest, road_type_config
     )

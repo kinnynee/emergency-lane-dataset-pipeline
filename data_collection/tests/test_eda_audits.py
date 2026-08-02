@@ -8,6 +8,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from analyze_scene_slices import build_scene_slice_analysis
 from build_quality_audit import build_quality_audit
+from detect_external_duplicates import detect_duplicates
 from external_eda_common import load_yaml
 from validate_split_policy import build_split_audit
 
@@ -118,3 +119,43 @@ def test_split_audit_detects_source_file_leakage() -> None:
     validations, _distribution, _holdout = build_split_audit(splits, manifest, policy)
     source_check = next(row for row in validations if row["check_id"] == "SOURCE_FILE_EXCLUSIVE")
     assert source_check["status"] == "FAIL"
+
+
+def test_duplicate_audit_detects_cross_split_near_duplicate_sample() -> None:
+    results = [
+        {
+            "image_records": [
+                {
+                    "dataset_name": "D",
+                    "sequence_name": "TRAIN_SEQ",
+                    "source_file": "train.jpg",
+                    "sha256": "different-a",
+                    "phash": 0,
+                },
+                {
+                    "dataset_name": "D",
+                    "sequence_name": "TEST_SEQ",
+                    "source_file": "test.jpg",
+                    "sha256": "different-b",
+                    "phash": 1,
+                },
+            ]
+        }
+    ]
+    rows = detect_duplicates(
+        results,
+        {
+            ("D", "TRAIN_SEQ"): "EXTERNAL_TRAIN",
+            ("D", "TEST_SEQ"): "CROSS_DATASET_TEST",
+        },
+    )
+
+    cross_split = [
+        row for row in rows if row["duplicate_type"] == "NEAR_DUPLICATE_PHASH_CROSS_SPLIT_SAMPLE"
+    ]
+    assert len(cross_split) == 2
+    assert {row["proposed_split"] for row in cross_split} == {
+        "EXTERNAL_TRAIN",
+        "CROSS_DATASET_TEST",
+    }
+    assert all(row["review_status"] == "PENDING" for row in cross_split)
