@@ -7,7 +7,7 @@
 - RADIATE: `EXCLUDED_VIEWPOINT_MISMATCH`, không chạy EDA.
 - Ảnh/frame kiểm tra chất lượng thật: **12,198**.
 - Annotation rows đọc: **1,638,901**.
-- Bounding box kiểm tra/phân tích: **1,301,866**.
+- Tổng bounding box trong phạm vi EDA: **1,301,866**; không phải full-raw total vì MIO dùng sample 5.000 ảnh, còn AAU/UA dùng phạm vi annotation rộng hơn.
 - Annotation lỗi duy nhất: **1,503**; tổng issue: **1,503**.
 - Nhóm trùng/nghi gần trùng trên mẫu: **3,333**.
 - Leakage mức CRITICAL: **0**.

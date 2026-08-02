@@ -747,6 +747,11 @@ def _write_reports(
     total_images_checked = sum(len(result.get("quality_rows", [])) for result in results)
     total_annotations = sum(int(result.get("annotation_row_count", 0)) for result in results)
     total_boxes_checked = sum(int(result.get("bbox_analyzed_count", 0)) for result in results)
+    bbox_scope_summary = "; ".join(
+        f"{row['dataset_name']}={row.get('analysis_scope') or 'NOT_DECLARED'}"
+        for row in inventory
+        if row.get("status") == "ANALYZED"
+    ) or "NOT_AVAILABLE"
     total_invalid = sum(
         len(
             {
@@ -822,7 +827,8 @@ def _write_reports(
 - RADIATE: `EXCLUDED_VIEWPOINT_MISMATCH`, không chạy EDA.
 - Ảnh/frame kiểm tra chất lượng thật: **{total_images_checked:,}**.
 - Annotation rows đọc: **{total_annotations:,}**.
-- Bounding box kiểm tra/phân tích: **{total_boxes_checked:,}**.
+- Tổng bounding box trong phạm vi EDA: **{total_boxes_checked:,}** (không phải full-raw total).
+- Phạm vi bbox theo dataset: **{bbox_scope_summary}**.
 - Annotation lỗi duy nhất: **{total_invalid:,}**; tổng issue: **{total_issues:,}**.
 - Nhóm trùng/nghi gần trùng trên mẫu: **{duplicate_groups:,}**.
 - Leakage mức CRITICAL: **{critical_leakage:,}**.
@@ -925,7 +931,8 @@ Thực hiện EDA cho MIO-TCD Localization, AAU RainSnow và UA-DETRAC nhằm đ
 - Số ảnh đã kiểm tra: {total_images_checked:,}
 - Số video/sequence đã kiểm tra: {sum(int(row["video_count"]) + int(row["sequence_count"]) for row in inventory):,}
 - Số annotation đã đọc: {total_annotations:,}
-- Số bounding box đã phân tích: {total_boxes_checked:,}
+- Tổng bounding box trong phạm vi EDA: {total_boxes_checked:,} (không phải full-raw total)
+- Phạm vi bbox theo dataset: {bbox_scope_summary}
 - Số annotation lỗi duy nhất: {total_invalid:,}
 - Tổng số issue annotation: {total_issues:,}
 - Số nhóm ảnh nghi ngờ trùng: {duplicate_groups:,}
@@ -1274,7 +1281,7 @@ def run(args: argparse.Namespace) -> int:
     print(output)
     print(f"Analyzed datasets: {len(analyzed)}/3")
     print(f"Files/images checked: {sum(int(row['files_processed_successfully']) for row in inventory)}")
-    print(f"Bounding boxes analyzed: {sum(int(row['bbox_analyzed_count']) for row in inventory)}")
+    print(f"Analysis-scope bounding boxes: {sum(int(row['bbox_analyzed_count']) for row in inventory)}")
     unique_invalid = {
         (str(row.get("dataset_name", "")), str(row.get("source_file", "")), str(row.get("annotation_id", "")))
         for row in invalid

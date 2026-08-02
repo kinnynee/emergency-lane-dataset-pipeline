@@ -91,3 +91,16 @@ def test_tracked_reports_reflect_supervisor_corrections() -> None:
     backlit = next(row for row in holdout if row["slice_id"] == "K230_BACKLIT")
     assert backlit["value"] == "BACKLIT"
     assert backlit["status"] == "PENDING_COLLECTION"
+
+
+def test_reports_use_audited_bbox_scope_and_neutral_ua_cause() -> None:
+    root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    methodology = (
+        REPO_ROOT / "data_collection" / "docs" / "25_eda_distribution_quality_split.md"
+    ).read_text(encoding="utf-8")
+    executive = (REPORT_ROOT / "executive_summary.md").read_text(encoding="utf-8")
+
+    assert "analysis-scope sum" in root_readme
+    assert "không phải full-raw total" in executive
+    assert "khác quy ước tọa độ/off-by-one" in methodology
+    assert "chưa có đủ bằng chứng để kết luận" in methodology

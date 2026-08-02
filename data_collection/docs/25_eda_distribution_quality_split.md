@@ -16,12 +16,14 @@ Không dùng độ sáng trung bình để gán `DAY/NIGHT`. Độ sáng chỉ c
 
 ## 3. Bounding box UA-DETRAC
 
-Box vượt biên ở xe đang đi vào hoặc ra khỏi khung hình là annotation hợp lệ, không phải nhãn lỗi. Pipeline hiện:
+Audit độc lập xác nhận 130.181 box vượt biên đều nằm ở cạnh phải và/hoặc cạnh dưới, mức vượt tối đa 1 pixel. Mẫu hình này phù hợp với giả thuyết khác quy ước tọa độ/off-by-one; chưa có đủ bằng chứng để kết luận nguyên nhân là xe đang đi vào hoặc ra khỏi khung hình. Đây là trường hợp cần chuẩn hóa tọa độ, không phải lý do để xóa annotation. Pipeline hiện:
 
 1. Giữ tọa độ gốc để truy vết.
 2. Clip box về `[0, width] × [0, height]`.
 3. Giữ đối tượng và dùng box đã clip để tạo label train.
 4. Chỉ loại box malformed hoặc không còn diện tích nhìn thấy sau clip.
+
+Con số 1.301.866 phải được ghi là **tổng box trong phạm vi EDA**: MIO dùng sample 5.000 ảnh, còn AAU và UA-DETRAC dùng phạm vi annotation rộng hơn/toàn bộ. Không trình bày con số này như tổng box của toàn bộ raw dataset.
 
 `boundary_clipped_bbox_count` được báo cáo riêng; không cộng các box này vào `invalid_annotations_unique`. Không được dùng hướng dẫn cũ “lọc box lỗi trước train”.
 
