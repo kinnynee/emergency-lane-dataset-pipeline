@@ -81,6 +81,21 @@ def test_resume_cache_rejects_stale_fingerprint(tmp_path: Path) -> None:
     assert runner._load_cache(cache) == expected
 
 
+def test_figure_provenance_hashes_declared_csv_source(tmp_path: Path) -> None:
+    source = tmp_path / "dataset_inventory.csv"
+    source.write_text("dataset_name,image_count\nExample,1\n", encoding="utf-8")
+    figure = tmp_path / "figures" / "01_images_by_dataset.png"
+    figure.parent.mkdir()
+    figure.write_bytes(b"deterministic-figure-placeholder")
+
+    rows = runner._write_figure_provenance(tmp_path, [figure])
+
+    assert rows[0]["status"] == "VERIFIED_CSV_SOURCE"
+    assert rows[0]["source_csvs"] == "dataset_inventory.csv"
+    assert len(rows[0]["figure_sha256"]) == 64
+    assert "dataset_inventory.csv:" in rows[0]["source_sha256s"]
+
+
 def test_aau_without_annotations_does_not_create_fake_error(tmp_path: Path) -> None:
     payload = {"images": [], "annotations": [], "categories": []}
     (tmp_path / "aauRainSnow-rgb.json").write_text(

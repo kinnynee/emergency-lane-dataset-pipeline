@@ -30,6 +30,7 @@ def test_required_handoff_files_are_present() -> None:
         REPORT_ROOT / "k230_holdout_plan.csv",
         REPORT_ROOT / "evaluation_slice_readiness.csv",
         REPORT_ROOT / "ua_others_sample_review.csv",
+        REPORT_ROOT / "figure_provenance.csv",
     ]
 
     missing = [str(path.relative_to(REPO_ROOT)) for path in required_paths if not path.is_file()]
@@ -104,3 +105,16 @@ def test_reports_use_audited_bbox_scope_and_neutral_ua_cause() -> None:
     assert "không phải full-raw total" in executive
     assert "khác quy ước tọa độ/off-by-one" in methodology
     assert "chưa có đủ bằng chứng để kết luận" in methodology
+
+
+def test_every_tracked_figure_has_verified_csv_provenance() -> None:
+    rows = _read_csv(REPORT_ROOT / "figure_provenance.csv")
+    tracked_figures = {
+        path.relative_to(REPORT_ROOT).as_posix()
+        for path in (REPORT_ROOT / "figures").glob("*.png")
+    }
+
+    assert {row["figure_path"] for row in rows} == tracked_figures
+    assert all(row["status"] == "VERIFIED_CSV_SOURCE" for row in rows)
+    assert all(row["source_csvs"] and row["source_sha256s"] for row in rows)
+    assert all(len(row["figure_sha256"]) == 64 for row in rows)

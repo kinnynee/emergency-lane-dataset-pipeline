@@ -523,6 +523,38 @@ def _gap_rows() -> list[dict[str, Any]]:
     return rows
 
 
+def _boxes_per_image_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        distribution = Counter(int(value) for value in result.get("boxes_per_image", {}).values())
+        for boxes_per_image, image_count in sorted(distribution.items()):
+            rows.append(
+                {
+                    "dataset_name": result["dataset_name"],
+                    "boxes_per_image": boxes_per_image,
+                    "image_count": image_count,
+                    "analysis_scope": result.get("analysis_scope", ""),
+                }
+            )
+    return rows
+
+
+def _ua_annotation_attribute_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ua = next(
+        (result for result in results if result["dataset_name"] == "UA-DETRAC Original"),
+        {},
+    )
+    analyzed = int(ua.get("bbox_analyzed_count", 0))
+    occluded = int(ua.get("occluded_bbox_count", 0))
+    truncated = int(ua.get("truncated_bbox_count", 0))
+    return [
+        {"metric": "OCCLUDED", "count": occluded, "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "NOT_MARKED_OCCLUDED", "count": max(0, analyzed - occluded), "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "TRUNCATED", "count": truncated, "analysis_scope": ua.get("analysis_scope", "")},
+        {"metric": "NOT_TRUNCATED", "count": max(0, analyzed - truncated), "analysis_scope": ua.get("analysis_scope", "")},
+    ]
+
+
 def _apply_scene_metadata(
     splits: list[dict[str, Any]],
     manifest: list[dict[str, Any]],
@@ -697,7 +729,8 @@ def _figures(
     viewpoints: list[dict[str, Any]],
     plans: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
-    results: list[dict[str, Any]],
+    boxes_per_image_distribution: list[dict[str, Any]],
+    ua_annotation_attributes: list[dict[str, Any]],
 ) -> list[Path]:
     figures = output / "figures"
     figures.mkdir(parents=True, exist_ok=True)
@@ -732,11 +765,15 @@ def _figures(
     categories = ["EXTREMELY_TINY", "VERY_SMALL", "SMALL", "USABLE"]
     category_counts = Counter(row.get("box_320_category", "") for row in bbox_samples)
     _bar("Tỷ lệ tiny/small/usable box trong mẫu", "Số box", categories, [category_counts[key] for key in categories], destination(14, "bbox_320_categories"))
-    all_counts = [int(value) for result in results for value in result.get("boxes_per_image", {}).values()]
+    all_counts = [
+        int(row["boxes_per_image"])
+        for row in boxes_per_image_distribution
+        for _ in range(int(row["image_count"]))
+    ]
     _hist("Số box mỗi ảnh/frame", "Số box", [float(value) for value in all_counts], destination(15, "boxes_per_image"))
-    ua = next((result for result in results if result["dataset_name"] == "UA-DETRAC Original"), {})
-    _bar("Occlusion UA-DETRAC", "Số box", ["Occluded", "Not marked occluded"], [float(ua.get("occluded_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("occluded_bbox_count", 0)))], destination(16, "ua_occlusion"))
-    _bar("Truncation UA-DETRAC", "Số box", ["Truncated", "Not truncated"], [float(ua.get("truncated_bbox_count", 0)), float(max(0, ua.get("bbox_analyzed_count", 0) - ua.get("truncated_bbox_count", 0)))], destination(17, "ua_truncation"))
+    ua_metrics = {str(row["metric"]): int(row["count"]) for row in ua_annotation_attributes}
+    _bar("Occlusion UA-DETRAC", "Số box", ["Occluded", "Not marked occluded"], [float(ua_metrics.get("OCCLUDED", 0)), float(ua_metrics.get("NOT_MARKED_OCCLUDED", 0))], destination(16, "ua_occlusion"))
+    _bar("Truncation UA-DETRAC", "Số box", ["Truncated", "Not truncated"], [float(ua_metrics.get("TRUNCATED", 0)), float(ua_metrics.get("NOT_TRUNCATED", 0))], destination(17, "ua_truncation"))
     vp = defaultdict(list)
     for row in viewpoints:
         if row["dataset_name"] != "RADIATE":
@@ -822,6 +859,66 @@ def _audit_figures(
         _plot_no_data("Proposal split theo đơn vị chống leakage", split_path)
     created.append(split_path)
     return created
+
+
+FIGURE_CSV_SOURCES = {
+    "01_images_by_dataset.png": ["dataset_inventory.csv"],
+    "02_videos_sequences_by_dataset.png": ["dataset_inventory.csv"],
+    "03_bboxes_by_dataset.png": ["dataset_inventory.csv"],
+    "04_original_class_distribution.png": ["class_distribution.csv"],
+    "05_mapped_class_distribution.png": ["class_distribution.csv"],
+    "06_lighting_distribution.png": ["condition_distribution.csv"],
+    "07_weather_distribution.png": ["condition_distribution.csv"],
+    "08_brightness_distribution.png": ["image_quality_samples.csv"],
+    "09_blur_distribution.png": ["image_quality_samples.csv"],
+    "10_resolution_distribution.png": ["image_quality_samples.csv"],
+    "11_bbox_area_ratio.png": ["bbox_samples.csv"],
+    "12_bbox_width_320.png": ["bbox_samples.csv"],
+    "13_bbox_height_320.png": ["bbox_samples.csv"],
+    "14_bbox_320_categories.png": ["bbox_samples.csv"],
+    "15_boxes_per_image.png": ["boxes_per_image_distribution.csv"],
+    "16_ua_occlusion.png": ["ua_annotation_attribute_summary.csv"],
+    "17_ua_truncation.png": ["ua_annotation_attribute_summary.csv"],
+    "18_viewpoint_score.png": ["viewpoint_suitability.csv"],
+    "19_selection_ratio.png": ["balanced_subset_plan.csv"],
+    "20_data_gaps.png": ["dataset_gap_analysis.csv"],
+    "21_cross_test_bbox_difficulty.png": ["cross_test_sequence_statistics.csv"],
+    "22_quality_issue_counts.png": ["quality_audit_summary.csv"],
+    "23_split_sequence_distribution.png": ["split_distribution.csv"],
+}
+
+
+def _write_figure_provenance(output: Path, figures: list[Path]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for figure in figures:
+        source_names = FIGURE_CSV_SOURCES.get(figure.name, [])
+        source_paths = [output / name for name in source_names]
+        available = bool(source_paths) and all(path.is_file() for path in source_paths)
+        rows.append(
+            {
+                "figure_path": figure.relative_to(output).as_posix(),
+                "figure_sha256": _sha256_file(figure) if figure.is_file() else "",
+                "source_csvs": ";".join(source_names),
+                "source_sha256s": ";".join(
+                    f"{path.name}:{_sha256_file(path)}" for path in source_paths if path.is_file()
+                ),
+                "generator": "run_external_dataset_eda.py",
+                "status": "VERIFIED_CSV_SOURCE" if available else "MISSING_SOURCE_DECLARATION",
+            }
+        )
+    write_csv(
+        output / "figure_provenance.csv",
+        rows,
+        [
+            "figure_path",
+            "figure_sha256",
+            "source_csvs",
+            "source_sha256s",
+            "generator",
+            "status",
+        ],
+    )
+    return rows
 
 
 def _write_reports(
@@ -1215,6 +1312,8 @@ def run(args: argparse.Namespace) -> int:
         row for result in analyzed for row in result.get("boundary_clip_samples", [])
     ]
     stationary = [row for result in analyzed for row in result.get("stationary_candidates", [])]
+    boxes_per_image_distribution = _boxes_per_image_rows(analyzed)
+    ua_annotation_attributes = _ua_annotation_attribute_rows(analyzed)
 
     write_csv(output / "dataset_inventory.csv", inventory, INVENTORY_FIELDS)
     write_csv(output / "dataset_comparison.csv", comparison, list(comparison[0]) if comparison else ["dataset_name"])
@@ -1319,13 +1418,39 @@ def run(args: argparse.Namespace) -> int:
             "manual_review_status",
         ],
     )
+    write_csv(
+        output / "boxes_per_image_distribution.csv",
+        boxes_per_image_distribution,
+        ["dataset_name", "boxes_per_image", "image_count", "analysis_scope"],
+    )
+    write_csv(
+        output / "ua_annotation_attribute_summary.csv",
+        ua_annotation_attributes,
+        ["metric", "count", "analysis_scope"],
+    )
     figures = _figures(
-        output, inventory, class_rows, quality_samples, bbox_samples, bbox_stats,
-        conditions, viewpoints, plans, gaps, analyzed,
+        output,
+        read_csv(output / "dataset_inventory.csv"),
+        read_csv(output / "class_distribution.csv"),
+        read_csv(output / "image_quality_samples.csv"),
+        read_csv(output / "bbox_samples.csv"),
+        read_csv(output / "bbox_statistics.csv"),
+        read_csv(output / "condition_distribution.csv"),
+        read_csv(output / "viewpoint_suitability.csv"),
+        read_csv(output / "balanced_subset_plan.csv"),
+        read_csv(output / "dataset_gap_analysis.csv"),
+        read_csv(output / "boxes_per_image_distribution.csv"),
+        read_csv(output / "ua_annotation_attribute_summary.csv"),
     )
     figures.extend(
-        _audit_figures(output, cross_sequence_stats, quality_audit, split_distribution)
+        _audit_figures(
+            output,
+            read_csv(output / "cross_test_sequence_statistics.csv"),
+            read_csv(output / "quality_audit_summary.csv"),
+            read_csv(output / "split_distribution.csv"),
+        )
     )
+    _write_figure_provenance(output, figures)
     contact_paths: list[str] = []
     contact_root = ROOT / "storage_placeholders" / "online_data" / "contact_sheets" / "external_eda"
     if not args.skip_contact_sheets:
