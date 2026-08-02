@@ -1255,7 +1255,7 @@ def run(args: argparse.Namespace) -> int:
             results.append(cached)
             continue
         if args.resume and cache_path.exists():
-            print(f"Resume: bỏ cache cũ/không khớp fingerprint {cache_path}")
+            print(f"Resume: stale cache rejected (fingerprint mismatch) {cache_path}")
         try:
             result = inspector(
                 path,
