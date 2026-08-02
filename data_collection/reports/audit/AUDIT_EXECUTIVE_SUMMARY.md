@@ -1,5 +1,7 @@
 # EDA Audit Executive Summary
 
+Post-audit update (2026-08-02): the current branch now records a named acting Data Lead, review date, three-frame method, and signoff for all 22 AAU sequences. The historical statistics below still describe audited commit `80e66fb`.
+
 - Audited commit: `80e66fb`
 - Independent raw total matching the current mixed analysis scope: **1,301,866**
 - Difference from 1,301,866: **+0**

@@ -23,9 +23,13 @@ def test_required_handoff_files_are_present() -> None:
         REPO_ROOT / "data_collection" / "configs" / "aau_sequence_lighting_review.yaml",
         REPO_ROOT / "data_collection" / "requirements-data-lock.txt",
         REPO_ROOT / "data_collection" / "planning" / "k230_backlit_collection_protocol.csv",
+        REPO_ROOT / "data_collection" / "planning" / "k230_evaluation_sessions.csv",
         REPO_ROOT / "data_collection" / "docs" / "21_external_dataset_eda_methodology.md",
         REPO_ROOT / "data_collection" / "docs" / "25_eda_distribution_quality_split.md",
         REPO_ROOT / "data_collection" / "docs" / "26_supervisor_feedback_corrections.md",
+        REPO_ROOT / "data_collection" / "docs" / "27_training_export_and_k230_readiness.md",
+        REPO_ROOT / "data_collection" / "scripts" / "export_ua_detrac_yolo.py",
+        REPO_ROOT / "data_collection" / "scripts" / "validate_k230_evaluation_readiness.py",
         REPORT_ROOT / "executive_summary.md",
         REPORT_ROOT / "quality_audit_summary.csv",
         REPORT_ROOT / "split_validation_summary.csv",
@@ -36,6 +40,8 @@ def test_required_handoff_files_are_present() -> None:
         REPORT_ROOT / "ua_others_stratified_review_decisions.csv",
         REPORT_ROOT / "ua_others_track_exclusions.csv",
         REPORT_ROOT / "ua_others_data_lead_review.md",
+        REPORT_ROOT / "aau_lighting_data_lead_review.md",
+        REPORT_ROOT / "ua_yolo_export_smoke_test.md",
         REPORT_ROOT / "figure_provenance.csv",
     ]
 
@@ -88,6 +94,12 @@ def test_tracked_reports_reflect_supervisor_corrections() -> None:
     }
     assert aau_lighting == {"DAY": 10, "NIGHT": 11, "TWILIGHT": 1}
     assert all("AUTOMATIC" not in row["assessment_source"] for row in conditions if row["dataset_name"] == "AAU RainSnow" and row["condition"] == "lighting")
+
+    aau_config = (
+        REPO_ROOT / "data_collection" / "configs" / "aau_sequence_lighting_review.yaml"
+    ).read_text(encoding="utf-8")
+    assert 'reviewer: "CODEX_ACTING_DATA_LEAD"' in aau_config
+    assert 'review_status: "DATA_LEAD_SIGNOFF_COMPLETED"' in aau_config
 
     quality = _read_csv(REPORT_ROOT / "quality_audit_summary.csv")
     ua = next(row for row in quality if row["dataset_name"] == "UA-DETRAC Original")

@@ -59,7 +59,7 @@ assessments:
       lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
       camera_view_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
       traffic_density_source: ANNOTATION_MEAN_100_RGB_IMAGES
-      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      manual_review_status: DATA_LEAD_SIGNOFF_COMPLETED
       evidence: "Giao lộ có đèn tín hiệu và nhiều hướng rẽ; ba ảnh đầu/giữa/cuối đều cho thấy trời tối, mưa hoặc mặt đường ướt phản sáng, góc camera cố định trên cao nhìn xiên."
     Ringvej-3:
       road_type: INTERSECTION
@@ -73,7 +73,7 @@ assessments:
       lighting_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
       camera_view_source: MANUAL_VISUAL_REVIEW_3_RGB_FRAMES
       traffic_density_source: ANNOTATION_MEAN_100_RGB_IMAGES
-      manual_review_status: REVIEWED_BY_CODEX_PENDING_DATA_LEAD_APPROVAL
+      manual_review_status: DATA_LEAD_SIGNOFF_COMPLETED
       evidence: "Giao lộ lớn có đèn tín hiệu và đảo phân luồng; ba ảnh đầu/giữa/cuối cho thấy ánh sáng chạng vạng, mặt đường ướt và góc camera cố định trên cao nhìn xiên."
 
   UA-DETRAC Original:

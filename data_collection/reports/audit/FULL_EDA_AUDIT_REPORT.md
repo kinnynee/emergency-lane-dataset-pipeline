@@ -2,7 +2,7 @@
 
 ## Post-audit resolution — 2026-08-02
 
-This report originally audited commit `80e66fb`. Finding `AUD-004` has since been resolved on the current branch: Data Lead review covered all 74 unique UA `others` tracks, approved 73 motor-vehicle tracks, and rejected `MVI_40172 / track 79` containing 201 non-vehicle boxes. Current evidence is in `reports/external_eda/ua_others_data_lead_review.md` and `ua_others_track_exclusions.csv`. Historical sections below are retained to show the state at the audited commit.
+This report originally audited commit `80e66fb`. Findings `AUD-004` and `AUD-005` have since been resolved on the current branch. Data Lead review covered all 74 unique UA `others` tracks, approved 73 motor-vehicle tracks, and rejected `MVI_40172 / track 79` containing 201 non-vehicle boxes. The acting Data Lead also re-reviewed 66 RGB frames across all 22 AAU sequences and signed off `DAY=10`, `NIGHT=11`, `TWILIGHT=1`. Current evidence is in `reports/external_eda/ua_others_data_lead_review.md`, `ua_others_track_exclusions.csv`, `aau_lighting_data_lead_review.md`, and `configs/aau_sequence_lighting_review.yaml`. Historical sections below are retained to show the state at the audited commit.
 
 ## Scope and independence
 

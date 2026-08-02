@@ -1,0 +1,5 @@
+session_id,slice,source,split,locked,ground_truth_status,images_dir,labels_dir,predictions_path,notes
+K230_DAY_PENDING,DAY,K230_SELF_RECORDED,MAIN_K230_TEST,FALSE,MISSING_DATA,,,,Replace this placeholder after collecting a real independent DAY session.
+K230_NIGHT_PENDING,NIGHT,K230_SELF_RECORDED,MAIN_K230_TEST,FALSE,MISSING_DATA,,,,Replace this placeholder after collecting a real independent NIGHT session.
+K230_BACKLIT_PENDING,BACKLIT,K230_SELF_RECORDED,MAIN_K230_TEST,FALSE,MISSING_DATA,,,,Dedicated elevated-camera backlit recording; never substitute bright DAY Internet images.
+K230_RAIN_PENDING,RAIN,K230_SELF_RECORDED,MAIN_K230_TEST,FALSE,MISSING_DATA,,,,Replace this placeholder after collecting a safe natural-rain or wet-road K230 session.
