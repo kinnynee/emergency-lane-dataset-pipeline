@@ -45,6 +45,14 @@ python -m pip install -r data_collection/requirements-data-lock.txt
 python -m pytest data_collection/tests -q
 ```
 
+Verify that the canonical raw UA-DETRAC archive still matches the committed baseline:
+
+```powershell
+python data_collection/scripts/checksum_dataset.py --verify
+```
+
+The baseline uses SHA-256 and is stored in [`baseline_checksums.csv`](data_collection/reports/external_eda/baseline_checksums.csv). The raw archive is kept outside Git and marked read-only locally.
+
 `requirements-data-lock.txt` ghi đúng phiên bản môi trường Windows/Python 3.12 đã dùng cho lần EDA được kiểm chứng. File requirements dạng khoảng phiên bản vẫn dùng cho phát triển; tái lập báo cáo nghiên cứu nên dùng lock.
 
 ## Reproduce the full EDA

@@ -30,6 +30,7 @@ def test_required_handoff_files_are_present() -> None:
         REPO_ROOT / "data_collection" / "docs" / "27_training_export_and_k230_readiness.md",
         REPO_ROOT / "data_collection" / "scripts" / "export_ua_detrac_yolo.py",
         REPO_ROOT / "data_collection" / "scripts" / "validate_k230_evaluation_readiness.py",
+        REPO_ROOT / "data_collection" / "scripts" / "checksum_dataset.py",
         REPORT_ROOT / "executive_summary.md",
         REPORT_ROOT / "quality_audit_summary.csv",
         REPORT_ROOT / "split_validation_summary.csv",
@@ -42,6 +43,7 @@ def test_required_handoff_files_are_present() -> None:
         REPORT_ROOT / "ua_others_data_lead_review.md",
         REPORT_ROOT / "aau_lighting_data_lead_review.md",
         REPORT_ROOT / "ua_yolo_export_smoke_test.md",
+        REPORT_ROOT / "baseline_checksums.csv",
         REPORT_ROOT / "figure_provenance.csv",
     ]
 
