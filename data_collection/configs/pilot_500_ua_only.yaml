@@ -1,0 +1,11 @@
+dataset_version: "dataset-v0.1"
+release_profile: "PILOT_500_UA_ONLY"
+selection_subset: "DATASET_V1_1500"
+source_dataset: "UA-DETRAC Original"
+target_total_images: 500
+expected_images_by_split:
+  train: 355
+  val: 105
+  cross_test: 40
+status: "READY_TO_EXPORT_FROM_UMT_EVIDENCE"
+notes: "Temporary pilot for training only. It does not claim the balanced three-source PILOT_500 allocation."

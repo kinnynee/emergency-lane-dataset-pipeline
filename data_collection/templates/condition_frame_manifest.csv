@@ -1,0 +1,4 @@
+video_id,session_id,source_id,processed_path,final_status,lighting_condition,weather_condition,backlit_review_status,reviewer,evidence_link,notes
+K230_DAY_001,S20260802_001,SRC_K230,processed/k230_day_001.mp4,APPROVED,DAY,CLEAR,,TODO,TODO,Condition was manually reviewed; use an independent session for MAIN_K230_TEST when applicable.
+K230_NIGHT_RAIN_001,S20260802_002,SRC_K230,processed/k230_night_rain_001.mp4,APPROVED,NIGHT,RAIN,,TODO,TODO,This video will generate both NIGHT and RAIN frame folders.
+K230_BACKLIT_001,S20260802_003,SRC_K230,processed/k230_backlit_001.mp4,APPROVED,BACKLIT,CLEAR,APPROVED,TODO,TODO,Dedicated elevated-camera backlit session; evidence must be retained.

@@ -1,0 +1,14 @@
+# Baseline intended for later K230-oriented experimentation.
+model: yolo11n.pt
+imgsz: 320
+epochs: 50
+batch: 16
+seed: 230
+deterministic: true
+workers: 4
+optimizer: auto
+pretrained: true
+patience: 15
+save: true
+project: runs/train
+name: yolo11n_320_baseline
