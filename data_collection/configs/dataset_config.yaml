@@ -1,15 +1,21 @@
 project_name: "canh_bao_lan_dung_khan_cap_k230"
 dataset_version: "dataset-v0.1"
+release_profile: "PILOT_500"
 class_names: ["vehicle"]
-target_total_images: 1500
-target_train_images: 1000
-target_val_images: 200
-target_test_images: 300
-primary_source: "K230_SELF_RECORDED"
+target_total_images: 500
+target_train_images: 421
+target_val_images: 51
+target_cross_test_images: 28
+target_main_k230_test_images: 0
+expected_images_by_source:
+  MIO-TCD Localization: 170
+  AAU RainSnow: 165
+  UA-DETRAC Original: 165
+primary_source: "EXTERNAL_MULTISOURCE_PILOT"
 split_unit: "session_id"
-test_locked: true
-storage_root: "../external_storage/dataset"
+main_k230_test_locked: false
+storage_root: "../dataset_output/dataset-v0.1/PILOT_500"
 metadata_root: "metadata"
 created_by: "TODO"
-status: "NOT_STARTED"
+status: "READY_TO_EXPORT_WHEN_APPROVED_SOURCE_ARCHIVES_ARE_AVAILABLE"
 

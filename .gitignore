@@ -1,6 +1,11 @@
 .pytest_cache/
 __pycache__/
 *.pyc
+.venv*/
+runs/
+data_collection/dataset_output/
+*.pt
+pip_replay_install.*.log
 .env
 cookies.txt
 secrets.*
