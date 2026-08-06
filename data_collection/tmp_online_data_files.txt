@@ -1,0 +1,5 @@
+﻿D:\Jack_Projects\Dataset traffic\emergency-lane-dataset-pipeline\data_collection\storage_placeholders\online_data\contact_sheets\.gitkeep
+D:\Jack_Projects\Dataset traffic\emergency-lane-dataset-pipeline\data_collection\storage_placeholders\online_data\frames\.gitkeep
+D:\Jack_Projects\Dataset traffic\emergency-lane-dataset-pipeline\data_collection\storage_placeholders\online_data\processed\.gitkeep
+D:\Jack_Projects\Dataset traffic\emergency-lane-dataset-pipeline\data_collection\storage_placeholders\online_data\quarantine\.gitkeep
+D:\Jack_Projects\Dataset traffic\emergency-lane-dataset-pipeline\data_collection\storage_placeholders\online_data\rejected\.gitkeep
