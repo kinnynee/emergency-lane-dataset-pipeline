@@ -20,7 +20,11 @@ python scripts/validate_metadata.py
 python scripts/check_image_label_pairs.py
 python scripts/generate_dataset_summary.py
 python scripts/run_online_data_pipeline.py --dry-run
+python scripts/dataset_checksum.py create --input <file_or_folder> --manifest reports/dataset_checksums.csv
+python scripts/dataset_checksum.py verify --input <file_or_folder> --manifest reports/dataset_checksums.csv --check-extra
 ```
+
+`dataset_checksum.py` tạo manifest SHA-256 cho file/thư mục và kiểm tra lại sau khi copy. Lúc verify, script trả `PASS`/`FAIL`; tuỳ chọn `--report` ghi CSV chi tiết các file `MISSING`, `MODIFIED` hoặc `UNEXPECTED`.
 
 EDA dữ liệu ngoài chạy từ thư mục gốc repo:
 

@@ -254,7 +254,7 @@ class _Selection:
 
 
 class _AssetReader:
-    """Read AAU assets from either an extracted directory or a ZIP file."""
+    """Read dataset assets from either an extracted directory or a ZIP file."""
 
     def __init__(self, path: Path):
         self.path = path
@@ -270,7 +270,7 @@ class _AssetReader:
             self._archive = zipfile.ZipFile(self.path)
             self._members = {item.filename.replace("\\", "/"): item.filename for item in self._archive.infolist() if not item.is_dir()}
         else:
-            raise FileNotFoundError(f"AAU source must be an extracted directory or ZIP: {self.path}")
+            raise FileNotFoundError(f"Dataset source must be an extracted directory or ZIP: {self.path}")
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -283,7 +283,7 @@ class _AssetReader:
             return normalized
         candidates = [name for name in self._members if name.endswith("/" + normalized)]
         if len(candidates) != 1:
-            raise FileNotFoundError(f"Could not uniquely locate AAU asset {requested}; matches={len(candidates)}")
+            raise FileNotFoundError(f"Could not uniquely locate dataset asset {requested}; matches={len(candidates)}")
         return candidates[0]
 
     def read(self, requested: str) -> bytes:
@@ -615,54 +615,50 @@ def _export_aau(writer: _DatasetWriter, aau_path: Path, split_map: dict[tuple[st
 
 
 def _export_ua(writer: _DatasetWriter, ua_path: Path, split_map: dict[tuple[str, str], str], mapping: dict[str, Any], selection: _Selection | None = None) -> None:
-    if not ua_path.is_file():
-        raise FileNotFoundError(f"UA-DETRAC ZIP not found: {ua_path}")
     exclusions = {
         (str(row.get("sequence_id", "")), str(row.get("track_id", "")))
         for row in mapping.get("ua_detrac", {}).get("others", {}).get("track_exclusions", [])
         if row.get("action") == "EXCLUDE_NON_VEHICLE_TRACK"
     }
-    with zipfile.ZipFile(ua_path) as archive:
-        by_frame: dict[tuple[str, int], zipfile.ZipInfo] = {}
-        for info in archive.infolist():
-            name = info.filename.replace("\\", "/")
+    with _AssetReader(ua_path) as source:
+        by_frame: dict[tuple[str, int], str] = {}
+        for name in source.names():
             if Path(name).suffix.lower() not in IMAGE_SUFFIXES or "/detrac-images/" not in name.lower():
                 continue
             try:
                 frame_id = int(Path(name).stem.lower().replace("img", ""))
             except ValueError:
                 continue
-            by_frame[(safe_sequence(name), frame_id)] = info
-        xml_infos = sorted((info for info in archive.infolist() if info.filename.lower().endswith(".xml") and "annotations-xml" in info.filename.lower()), key=lambda item: item.filename)
-        if not xml_infos:
-            raise RuntimeError("UA archive contains no annotation XML files")
-        for xml_info in xml_infos:
-            root = ET.fromstring(archive.read(xml_info))
-            sequence = root.attrib.get("name") or Path(xml_info.filename).stem
+            by_frame[(safe_sequence(name), frame_id)] = name
+        xml_names = sorted(name for name in source.names() if name.lower().endswith(".xml") and "annotations-xml" in name.lower())
+        if not xml_names:
+            raise RuntimeError("UA source contains no annotation XML files")
+        for xml_name in xml_names:
+            root = ET.fromstring(source.read(xml_name))
+            sequence = root.attrib.get("name") or Path(xml_name).stem
             split = _ua_split(split_map, sequence)
             for frame in root.findall("frame"):
                 frame_id = int(frame.attrib.get("num", "0"))
-                source_info = by_frame.get((sequence, frame_id))
+                source_image = by_frame.get((sequence, frame_id))
                 annotations: list[dict[str, Any]] = []
                 for target in frame.findall("./target_list/target"):
                     box = target.find("box")
                     attribute = target.find("attribute")
-                    base = {"annotation_id": f"{frame_id}:{target.attrib.get('id', '')}", "track_id": str(target.attrib.get("id", "")), "original_class": str(attribute.attrib.get("vehicle_type", "MISSING")) if attribute is not None else "MISSING", "source_annotation": xml_info.filename}
+                    base = {"annotation_id": f"{frame_id}:{target.attrib.get('id', '')}", "track_id": str(target.attrib.get("id", "")), "original_class": str(attribute.attrib.get("vehicle_type", "MISSING")) if attribute is not None else "MISSING", "source_annotation": xml_name}
                     if box is None:
                         annotations.append(base)
                     else:
                         left, top, box_width, box_height = (box.attrib.get(key, "") for key in ("left", "top", "width", "height"))
                         left_value, top_value, width_value, height_value = (_as_float(value) for value in (left, top, box_width, box_height))
                         annotations.append({**base, "xmin": left, "ymin": top, "xmax": left_value + width_value if left_value is not None and width_value is not None else "", "ymax": top_value + height_value if top_value is not None and height_value is not None else ""})
-                if source_info is None:
+                if source_image is None:
                     for annotation in annotations:
                         writer.reject({"dataset": "UA-DETRAC Original", "image_id": f"UA_{sequence}_{frame_id:05d}", "sequence_id": sequence, "frame_id": frame_id, **annotation}, "MISSING_SOURCE_IMAGE")
                     continue
-                source_image = source_info.filename.replace("\\", "/")
                 if selection is not None and not selection.includes("UA-DETRAC Original", source_image):
                     continue
                 writer.register_sequence("UA-DETRAC Original", sequence, split, "split_proposal.csv")
-                writer.add_image(dataset="UA-DETRAC Original", mapping_key="ua_detrac", image_id=f"UA_{sequence}_{frame_id:05d}", split=split, sequence_id=sequence, frame_id=str(frame_id), source_image=source_image, image_bytes=archive.read(source_info), annotations=annotations, exclusions=exclusions)
+                writer.add_image(dataset="UA-DETRAC Original", mapping_key="ua_detrac", image_id=f"UA_{sequence}_{frame_id:05d}", split=split, sequence_id=sequence, frame_id=str(frame_id), source_image=source_image, image_bytes=source.read(source_image), annotations=annotations, exclusions=exclusions)
                 if selection is not None:
                     selection.consume("UA-DETRAC Original", source_image)
 
