@@ -110,6 +110,28 @@ def test_unified_export_is_one_class_and_reconciles_counts(tmp_path: Path) -> No
     assert {row["original_class"] for row in annotations} == {"car"}
 
 
+def test_unified_export_accepts_extracted_ua_directory(tmp_path: Path) -> None:
+    ua_zip = tmp_path / "ua.zip"
+    source_image = tmp_path / "ua.jpg"
+    _make_ua(ua_zip, source_image)
+    ua_directory = tmp_path / "ua_extracted"
+    with zipfile.ZipFile(ua_zip) as archive:
+        archive.extractall(ua_directory)
+    split = tmp_path / "split.csv"
+    split.write_text(
+        "dataset_name,sequence_id,proposed_split\n"
+        "UA-DETRAC Original,MVI_40172,CROSS_DATASET_TEST\n",
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "dataset_from_directory"
+    summary = export_unified_yolo(None, None, ua_directory, output, split, MAPPING)
+
+    assert summary["images_by_split"] == {"cross_test": 1}
+    assert (output / "images" / "cross_test" / "UA_MVI_40172_00001.jpg").is_file()
+    assert validate_dataset(output)["status"] == "PASS"
+
+
 def test_backlit_extraction_requires_manual_review() -> None:
     with pytest.raises(ValueError, match="BACKLIT requires"):
         _conditions({"lighting_condition": "BACKLIT"})
