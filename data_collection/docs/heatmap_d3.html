@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heatmap D3</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-bottom: 10px; }
+    svg { background: white; }
+    .cell { stroke: #fff; stroke-width: 1px; }
+    .label { font-size: 12px; }
+    .value { font-size: 11px; fill: black; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h2>Heatmap: road type vs lighting</h2>
+  <div id="chart"></div>
+  <script>
+    const data = [{"roadType": "HIGHWAY", "lighting": "DAY", "value": 2}, {"roadType": "HIGHWAY", "lighting": "NIGHT", "value": 0}, {"roadType": "HIGHWAY", "lighting": "TWILIGHT", "value": 0}, {"roadType": "INTERSECTION", "lighting": "DAY", "value": 3}, {"roadType": "INTERSECTION", "lighting": "NIGHT", "value": 1}, {"roadType": "INTERSECTION", "lighting": "TWILIGHT", "value": 1}, {"roadType": "URBAN_ROAD", "lighting": "DAY", "value": 0}, {"roadType": "URBAN_ROAD", "lighting": "NIGHT", "value": 1}, {"roadType": "URBAN_ROAD", "lighting": "TWILIGHT", "value": 2}];
+    const roadTypes = ["HIGHWAY", "INTERSECTION", "URBAN_ROAD"];
+    const lightings = ["DAY", "NIGHT", "TWILIGHT"];
+
+    const margin = {top: 30, right: 20, bottom: 60, left: 120};
+    const width = 700 - margin.left - margin.right;
+    const height = 360 - margin.top - margin.bottom;
+
+    const svg = d3.select('#chart')
+      .append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+    const x = d3.scaleBand().domain(lightings).range([0, width]).padding(0.05);
+    const y = d3.scaleBand().domain(roadTypes).range([0, height]).padding(0.05);
+    const color = d3.scaleSequential(d3.interpolateOrRd).domain([0, d3.max(data, d => d.value) || 1]);
+
+    svg.selectAll('rect')
+      .data(data)
+      .enter()
+      .append('rect')
+      .attr('class', 'cell')
+      .attr('x', d => x(d.lighting))
+      .attr('y', d => y(d.roadType))
+      .attr('width', x.bandwidth())
+      .attr('height', y.bandwidth())
+      .attr('fill', d => color(d.value))
+      .append('title').text(d => d.roadType + ' / ' + d.lighting + ': ' + d.value);
+
+    svg.selectAll('.value')
+      .data(data)
+      .enter().append('text')
+      .attr('class', 'value')
+      .text(d => d.value)
+      .attr('x', d => x(d.lighting) + x.bandwidth() / 2)
+      .attr('y', d => y(d.roadType) + y.bandwidth() / 2 + 4)
+      .attr('text-anchor', 'middle');
+
+    svg.append('g')
+      .selectAll('.xLabel')
+      .data(lightings)
+      .enter().append('text')
+      .attr('class', 'label xLabel')
+      .text(d => d)
+      .attr('x', d => x(d) + x.bandwidth() / 2)
+      .attr('y', height + 20)
+      .attr('text-anchor', 'middle');
+
+    svg.append('g')
+      .selectAll('.yLabel')
+      .data(roadTypes)
+      .enter().append('text')
+      .attr('class', 'label yLabel')
+      .text(d => d)
+      .attr('x', -6)
+      .attr('y', d => y(d) + y.bandwidth() / 2 + 4)
+      .attr('text-anchor', 'end');
+  </script>
+</body>
+</html>

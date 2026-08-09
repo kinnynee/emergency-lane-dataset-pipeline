@@ -9,8 +9,8 @@ split_unit_priority:
   - source_group
 
 external_ratios:
-  EXTERNAL_TRAIN: 0.75
-  EXTERNAL_VALIDATION: 0.15
+  EXTERNAL_TRAIN: 0.80
+  EXTERNAL_VALIDATION: 0.10
   CROSS_DATASET_TEST: 0.10
 
 dataset_overrides:

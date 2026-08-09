@@ -29,6 +29,7 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 - [`data_collection/docs/25_eda_distribution_quality_split.md`](data_collection/docs/25_eda_distribution_quality_split.md): distribution, quality, road-type, and split audit notes.
 - [`data_collection/docs/26_supervisor_feedback_corrections.md`](data_collection/docs/26_supervisor_feedback_corrections.md): corrections for lighting labels, boundary boxes, class mapping, and the missing backlit slice.
 - [`data_collection/docs/27_training_export_and_k230_readiness.md`](data_collection/docs/27_training_export_and_k230_readiness.md): production YOLO export and K230 slice-readiness workflow.
+- [`data_collection/docs/28_unified_export_and_condition_frames.md`](data_collection/docs/28_unified_export_and_condition_frames.md): unified MIO/AAU/UA YOLO export, QC, condition-frame extraction, and YOLO11n-320 baseline commands.
 - [`data_collection/reports/external_eda/executive_summary.md`](data_collection/reports/external_eda/executive_summary.md): main EDA handoff summary.
 - [`data_collection/reports/external_eda/quality_audit_summary.csv`](data_collection/reports/external_eda/quality_audit_summary.csv): dataset-level quality gates.
 - [`data_collection/reports/external_eda/split_validation_summary.csv`](data_collection/reports/external_eda/split_validation_summary.csv): leakage and split validation results.

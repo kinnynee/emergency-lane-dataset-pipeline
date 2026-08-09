@@ -286,7 +286,7 @@ def aggregate_numeric(
 
 def stable_split(sequence_id: str) -> str:
     value = int(hashlib.sha256(sequence_id.encode("utf-8")).hexdigest()[:8], 16) / 0xFFFFFFFF
-    if value < 0.75:
+    if value < 0.80:
         return "EXTERNAL_TRAIN"
     if value < 0.90:
         return "EXTERNAL_VALIDATION"

@@ -1,0 +1,27 @@
+[
+  {
+    "x": "train",
+    "y": "UNKNOWN",
+    "value": 355
+  },
+  {
+    "x": "val",
+    "y": "UNKNOWN",
+    "value": 105
+  },
+  {
+    "x": "test",
+    "y": "INTERSECTION",
+    "value": 15
+  },
+  {
+    "x": "test",
+    "y": "URBAN_ROAD",
+    "value": 15
+  },
+  {
+    "x": "test",
+    "y": "HIGHWAY",
+    "value": 10
+  }
+]

@@ -1,0 +1,5 @@
+# Training-only dependencies. Install after data QC passes.
+ultralytics>=8.3,<9
+torch>=2.5,<3
+torchvision>=0.20,<1
+PyYAML>=6,<7

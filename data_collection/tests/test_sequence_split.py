@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from detect_sequence_leakage import assert_sequence_split
 from create_balanced_subset_plan import create_plan
-from external_eda_common import load_yaml
+from external_eda_common import load_yaml, stable_split
 from run_external_dataset_eda import _apply_scene_metadata, _scene_assessment_rows
 
 
@@ -29,6 +30,13 @@ def test_different_sequences_can_have_different_splits() -> None:
         {"dataset_name": "UA", "sequence_id": "MVI_2", "proposed_split": "CROSS_DATASET_TEST"},
     ]
     assert_sequence_split(rows)
+
+
+def test_stable_split_targets_801010_distribution() -> None:
+    counts = Counter(stable_split(f"seq_{index}") for index in range(1000))
+    assert counts["EXTERNAL_TRAIN"] >= 780
+    assert counts["EXTERNAL_VALIDATION"] >= 90
+    assert counts["CROSS_DATASET_TEST"] >= 90
 
 
 def test_road_type_config_uses_allowed_values() -> None:
