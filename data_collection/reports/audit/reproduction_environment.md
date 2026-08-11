@@ -23,7 +23,7 @@ Audited commit: `80e66fb`
 - Independent audit seeds: MIO `230`, AAU `231`, UA `232`, bbox reservoir `233`.
 - Text input uses UTF-8/UTF-8-SIG where appropriate.
 - The production CLI accepts `--workers`, but the audited execution path does not use it.
-- Resume cache names include dataset and sample size only. They do not fingerprint the parser, mapping config, source archive, or audited commit.
+- Resume cache identity is now versioned and fingerprints the runner, inspector, shared helper, YAML configs, selected options, Python version, and a source-tree stat signature. A mismatch rejects the cached result.
 
 These limitations mean a future environment or stale cache may produce a result that appears reproducible without being equivalent to this audit.
 

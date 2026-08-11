@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .venv*/
+node_modules/
 runs/
 data_collection/dataset_output/
 *.pt

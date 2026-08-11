@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import csv
 import sys
 from pathlib import Path
 
@@ -79,6 +80,15 @@ def test_resume_cache_rejects_stale_fingerprint(tmp_path: Path) -> None:
     assert runner._load_cache(cache, first_identity) == expected
     assert runner._load_cache(cache, second_identity) is None
     assert runner._load_cache(cache) == expected
+
+
+def test_aud_002_is_closed_only_with_cache_fingerprint_regression_coverage() -> None:
+    findings = Path(__file__).resolve().parents[1] / "reports" / "audit" / "audit_findings.csv"
+    with findings.open(encoding="utf-8-sig", newline="") as handle:
+        audit_002 = next(row for row in csv.DictReader(handle) if row["finding_id"] == "AUD-002")
+
+    assert audit_002["status"] == "CLOSED"
+    assert "fingerprint" in audit_002["evidence"].lower()
 
 
 def test_figure_provenance_hashes_declared_csv_source(tmp_path: Path) -> None:

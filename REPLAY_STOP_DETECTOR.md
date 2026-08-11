@@ -1,10 +1,15 @@
 # Chạy replay phát hiện xe dừng
 
-`replay_stop_detector.py` đọc video gốc, YOLO phát hiện xe, ByteTrack gán `track_id`, và chỉ cảnh báo khi xe đứng yên trong ROI đủ thời gian. Video overlay và log CSV là **ứng viên cần duyệt thủ công**, không phải ground truth.
+`host_yolo_loop.py` là vòng lặp dùng chung cho YOLO + ByteTrack + ROI. Cảnh
+báo dừng dựa trên **tốc độ mặt đường (km/h)**, không dùng chênh lệch pixel.
+`replay_stop_detector.py` được giữ lại như lệnh tương thích và gọi đúng vòng
+lặp này.
 
-## Chuẩn bị một lần
+Kết quả vẫn là công cụ hỗ trợ vận hành; mọi cảnh báo phải được người xem lại.
+Chỉ dùng cho camera cố định/góc cao. Dashcam hoặc video bị đổi độ phân giải
+không hợp lệ cho phép đo tốc độ đã hiệu chuẩn.
 
-Máy cần Python 3.11 hoặc 3.12. Từ thư mục này, tạo môi trường riêng và cài dependency:
+## Chuẩn bị
 
 ```powershell
 py -3.11 -m venv .venv
@@ -13,37 +18,52 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements-replay.txt
 ```
 
-Để thử với YOLO COCO (chỉ để test), lấy một model local:
+## Hiệu chuẩn bắt buộc
+
+Sao chép `speed_calibration.template.json` thành một tệp riêng ngoài Git, rồi
+điền bốn điểm cùng thứ tự:
+
+- `image_points_px`: bốn điểm trên mặt đường trong ảnh/video.
+- `world_points_m`: đúng bốn điểm đó trong hệ toạ độ mét đã đo tại hiện trường.
+- `frame_size_px`: độ phân giải gốc của stream được hiệu chuẩn.
+
+Ví dụ, một hình chữ nhật làn đường rộng 3,5 m và dài 20 m có thể đặt hệ toạ
+độ mặt đường là `(0,0)`, `(3.5,0)`, `(3.5,20)`, `(0,20)`. Đây chỉ là quy ước
+toạ độ; các vị trí pixel phải được lấy từ camera K230 thực tế. Không dùng các
+giá trị `0` trong tệp template để chạy đo tốc độ.
+
+Vòng lặp dừng ngay khi độ phân giải video khác `frame_size_px`, để tránh dùng
+nhầm hiệu chuẩn.
+
+## Chạy
+
+Lệnh dưới đây mở giao diện chọn ROI trên frame đầu tiên. Kéo ROI quanh làn
+khẩn cấp rồi nhấn Enter. Dùng `--roi x1,y1,x2,y2` nếu muốn nhập ROI chuẩn hoá
+thay cho giao diện.
 
 ```powershell
-python -c "from ultralytics import YOLO; YOLO('yolo11n.pt')"
-```
-
-Khi dùng model một lớp `vehicle` của dự án, thay đường dẫn model bằng `best.pt` và truyền `--classes 0`.
-
-## Test khuyến nghị
-
-Dùng A40 vì camera cố định, dễ đánh giá dừng trong ROI. Chạy lệnh sau, rồi kéo ROI quanh làn khẩn cấp/đoạn đường cần giám sát và nhấn Enter:
-
-```powershell
-python replay_stop_detector.py `
-  --video "D:\UMT_Evidence\online_data\raw\youtube_cc_verified\YTSave_YouTube_Motorway-A40-From-Bridge_Media_A7HvgY2s2f8_001_720p.mp4" `
+python host_yolo_loop.py `
+  --video "D:\UMT_Evidence\online_data\raw\youtube_cc_verified\example.mp4" `
   --model ".\yolo11n.pt" `
+  --speed-calibration "D:\UMT_Evidence\k230\calibration\lane_a.json" `
   --select-roi `
   --classes 2,3,5,7 `
+  --stop-speed-kmh 2 `
   --stop-seconds 3 `
   --output "D:\UMT_Evidence\online_data\replays\a40_stop_test.mp4" `
   --display
 ```
 
-`2,3,5,7` là các lớp car, motorcycle, bus, truck của YOLO COCO. Khi test ngắn, thêm `--max-frames 300`; với video 30 FPS đó là khoảng 10 giây.
+Với model dự án một lớp `vehicle`, thay model bằng `best.pt` và truyền
+`--classes 0`. Có thể thử nhanh bằng `--max-frames 300`; khi review cuối cùng
+nên giữ `--frame-stride 1`.
 
-## Kết quả và hiệu chỉnh
+## Đầu ra và giới hạn
 
-- Video có khung ROI màu vàng; chuyển đỏ khi có `STOPPED`.
-- File `.events.csv` cùng tên video liệt kê track ID, thời điểm alert và lý do kết thúc. Mọi dòng có `NEEDS_MANUAL_REVIEW`.
-- Chỉ dùng camera cố định/elevated cho cảnh báo dừng. Dashcam di chuyển cùng xe nên chỉ phù hợp demo phát hiện xe, không phải xác minh dừng.
-- Nếu cảnh báo nhạy quá, giảm `--motion-threshold-px` xuống `8` hoặc tăng `--stop-seconds` lên `4`.
-- Chưa thấy cảnh báo không có nghĩa là video không có xe dừng; video hiện tại chưa có positive event đã xác nhận.
-
-Không công bố video overlay khi chưa xử lý quyền riêng tư (biển số/khuôn mặt) và kiểm tra license.
+- Video overlay hiển thị `km/h` theo hiệu chuẩn, trạng thái ROI và cảnh báo.
+- File `.events.csv` lưu hiệu chuẩn, ngưỡng tốc độ, tốc độ tại lúc alert và
+  thời lượng dừng để truy vết.
+- `--stop-speed-kmh` là ngưỡng vận hành; nó cần được xác nhận bằng video K230
+  có ground truth, không tự xem là tiêu chí đánh giá model.
+- Không công bố video overlay trước khi xử lý quyền riêng tư (biển số/khuôn
+  mặt) và kiểm tra giấy phép nguồn video, đặc biệt với YouTube.
