@@ -47,6 +47,20 @@ python -m pip install -r data_collection/requirements-data-lock.txt
 python -m pytest data_collection/tests -q
 ```
 
+The team-model smoke configuration uses repository-relative paths and is named
+`yolo11n_320_smoke_v2_500.yaml`, matching its 500 training images. If the large
+dataset is stored outside the clone, pass portable command-line overrides:
+
+```powershell
+python data_collection/scripts/run_yolo11n_smoke_v2.py `
+  --run-dir runs/smoke-v2-500 `
+  --source-dataset "E:/datasets/dataset-v1-full" `
+  --ua-annotation-root "E:/datasets/DETRAC-Train-Annotations-XML" `
+  --ua-annotation-root "E:/datasets/DETRAC-Test-Annotations-XML"
+```
+
+Do not commit `node_modules`; restore JavaScript tooling with `npm ci`.
+
 Verify that the canonical raw UA-DETRAC archive still matches the committed baseline:
 
 ```powershell

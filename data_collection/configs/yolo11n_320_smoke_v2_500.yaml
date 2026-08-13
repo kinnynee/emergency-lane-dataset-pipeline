@@ -16,8 +16,8 @@ prediction_confidence: 0.50
 train_images: 500
 validation_images: 180
 cross_test_images: 180
-source_dataset: D:/UMT_EVIDENCE/dataset-v1-full
+source_dataset: data_collection/dataset_output/dataset-v1-full
 ua_annotation_roots:
-  - D:/UMT_EVIDENCE/DETRAC-Train-Annotations-XML
-  - D:/UMT_EVIDENCE/DETRAC-Test-Annotations-XML
+  - data_collection/storage_placeholders/online_data/raw/ua_detrac_orig/DETRAC-Train-Annotations-XML
+  - data_collection/storage_placeholders/online_data/raw/ua_detrac_orig/DETRAC-Test-Annotations-XML
 model_provenance_policy: TEAM_TRAINED_ONLY_NO_COCO_FALLBACK

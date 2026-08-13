@@ -217,3 +217,17 @@ def test_tracked_reports_do_not_expose_machine_absolute_paths() -> None:
     ]
 
     assert not offenders, f"Machine-specific paths remain in tracked reports: {offenders}"
+
+
+def test_smoke_config_is_portable_and_matches_500_image_run() -> None:
+    config_path = REPO_ROOT / "data_collection" / "configs" / "yolo11n_320_smoke_v2_500.yaml"
+    runner_path = REPO_ROOT / "data_collection" / "scripts" / "run_yolo11n_smoke_v2.py"
+    assert config_path.is_file()
+    assert not (config_path.parent / "yolo11n_320_smoke_v2_750.yaml").exists()
+    combined = config_path.read_text(encoding="utf-8") + runner_path.read_text(encoding="utf-8")
+    assert "train_images: 500" in combined
+    assert "750 train images" not in combined
+    assert "D:/UMT_EVIDENCE" not in combined
+    assert "D:\\UMT_EVIDENCE" not in combined
+    assert "--source-dataset" in combined
+    assert "--ua-annotation-root" in combined

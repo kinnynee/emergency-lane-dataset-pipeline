@@ -294,7 +294,7 @@ def _render_validation_predictions(
 
 
 def _write_report(run_dir: Path, config: dict[str, Any], subset: dict[str, Any], validation: dict[str, Any], losses: dict[str, list[float]], predictions: dict[str, int]) -> None:
-    summary = f"""# Smoke Test V2 — YOLO11n 320, 750 train images, 25 epochs
+    summary = f"""# Smoke Test V2 — YOLO11n 320, 500 train images, 25 epochs
 
 This is a pipeline smoke run only. It does not report or interpret mAP because UA ignored regions are filtered in the custom prediction-count review, not in Ultralytics' default metric loop.
 
@@ -348,14 +348,21 @@ def _write_team_model_manifest(run_dir: Path, config: dict[str, Any], weights: P
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=REPO_ROOT / "data_collection" / "configs" / "yolo11n_320_smoke_v2_750.yaml")
+    parser.add_argument("--config", type=Path, default=REPO_ROOT / "data_collection" / "configs" / "yolo11n_320_smoke_v2_500.yaml")
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--source-dataset", type=Path, help="Override source_dataset from the config (useful when data lives outside the clone).")
+    parser.add_argument("--ua-annotation-root", action="append", type=Path, help="Override ua_annotation_roots; repeat for multiple directories.")
     args = parser.parse_args()
     config = _load_config(args.config.resolve())
-    source = Path(config["source_dataset"]).resolve()
+    source_path = args.source_dataset or Path(config["source_dataset"])
+    source = (source_path if source_path.is_absolute() else REPO_ROOT / source_path).resolve()
     run_dir = args.run_dir.resolve()
-    ignored_by_sequence = _load_ua_ignored_regions(Path(item).resolve() for item in config["ua_annotation_roots"])
+    annotation_roots = []
+    for item in args.ua_annotation_root or config["ua_annotation_roots"]:
+        path = Path(item)
+        annotation_roots.append((path if path.is_absolute() else REPO_ROOT / path).resolve())
+    ignored_by_sequence = _load_ua_ignored_regions(annotation_roots)
     started = datetime.now(timezone.utc)
     subset = _build_subset(source, run_dir, int(config["seed"]), ignored_by_sequence)
     validation = validate_dataset(run_dir / "dataset")
