@@ -1,0 +1,10 @@
+{
+  "format": "k230-team-model-runtime-v1",
+  "provenance": "TEAM_TRAINED_ONLY_NO_COCO_FALLBACK",
+  "input_size": 320,
+  "class_ids": [0],
+  "class_names": {"0": "vehicle"},
+  "confidence": 0.5,
+  "kmodel_path": "/sdcard/models/emergency_lane_team.kmodel",
+  "output_decoder": "YOLO11_DETECT_ONE_CLASS"
+}

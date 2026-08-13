@@ -26,6 +26,28 @@ GroundPoint = tuple[float, float]
 PixelROI = tuple[int, int, int, int]
 PixelPolygon = tuple[PixelPoint, ...]
 
+REPO_ROOT = Path(__file__).resolve().parent
+
+
+def load_runtime_contract(path: Path) -> dict[str, object]:
+    """Load the deployment values shared by host replay and CanMV."""
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Cannot read runtime contract: {path}") from exc
+    expected = {
+        "format": "k230-team-model-runtime-v1",
+        "provenance": "TEAM_TRAINED_ONLY_NO_COCO_FALLBACK",
+        "input_size": 320,
+        "class_ids": [0],
+        "class_names": {"0": "vehicle"},
+        "confidence": 0.50,
+    }
+    mismatches = [key for key, value in expected.items() if contract.get(key) != value]
+    if mismatches:
+        raise ValueError("Runtime contract mismatch: " + ", ".join(mismatches))
+    return contract
+
 
 @dataclass(frozen=True)
 class GroundPlaneTransform:
@@ -382,6 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--video", required=True, type=Path, help="Input video; it is never changed.")
     parser.add_argument("--model", required=True, type=Path, help="Local YOLO .pt model file.")
+    parser.add_argument("--runtime-contract", type=Path, default=REPO_ROOT / "k230" / "runtime_contract.json", help="Shared Host/K230 model contract.")
     parser.add_argument("--speed-calibration", required=True, type=Path, help="Verified ground-plane calibration JSON.")
     roi_group = parser.add_mutually_exclusive_group(required=True)
     roi_group.add_argument("--roi-config", type=Path, help="Reviewed CALIBRATED polygon ROI JSON for this camera.")
@@ -408,6 +431,11 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError(f"Video not found: {args.video}")
     if not args.model.is_file():
         raise ValueError(f"Model not found: {args.model}")
+    contract = load_runtime_contract(args.runtime_contract)
+    if args.classes != contract["class_ids"]:
+        raise ValueError("--classes must match the shared Host/K230 runtime contract")
+    if not math.isclose(args.confidence, float(contract["confidence"]), rel_tol=0.0, abs_tol=1e-9):
+        raise ValueError("--confidence must match the shared Host/K230 runtime contract")
     if args.classes != [0]:
         raise ValueError("Only class 0 from the team one-class model is permitted; COCO class IDs are not supported")
     if not math.isclose(args.confidence, 0.50, rel_tol=0.0, abs_tol=1e-9):
