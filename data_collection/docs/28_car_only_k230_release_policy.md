@@ -1,37 +1,49 @@
-# Chính sách phát hành model K230 — car-only
+# Chính sách phát hành model car-only cho K230
 
-## Phạm vi nhãn
+## Nhãn và đánh giá
 
-- Detector một lớp (`class_id=0`, tên nội bộ `vehicle`) chỉ giữ ô tô và các
-  phương tiện bốn bánh đã được mapping phê duyệt.
-- `motorcycle`, `motorbike` và `bicycle` không được xuất thành nhãn dương.
-  Bbox hợp lệ của chúng được ghi vào `metadata/ignored_annotations.csv` với
-  `handling=IGNORE_REGION`.
-- Khi export train, vùng ignore được che đen trên **bản sao xuất ra**; ảnh và
-  annotation nguồn không bị sửa. Khi đánh giá, prediction có tâm trong vùng
-  ignore phải bị loại trước matching. Vì thế các đối tượng này không bị học
-  ngầm là background.
+- Detector chỉ có một lớp: `class_id=0`, tên `vehicle`, cho ô tô và phương tiện
+  bốn bánh đã được phê duyệt. Motorcycle, motorbike và bicycle không là positive.
+- AAU RainSnow và UA-DETRAC Original luôn có mAP/recall riêng tại
+  `confidence=0.00` và `confidence=0.50`; không công bố headline gộp hai domain.
+- MIO-TCD chỉ dùng để train. Replay cũ dùng logic trước median/hysteresis không
+  được dùng cho báo cáo phát hành.
 
-## Quy tắc model và ngưỡng
+## Transfer learning và bằng chứng fine-tune
 
-- Khởi tạo train từ `yolo11n.yaml`, `pretrained: false`. Không dùng checkpoint
-  COCO (`yolo11n.pt`, `yolov8*.pt`) như model fallback hoặc model bàn giao.
-- Chạy ban đầu dùng 500 ảnh train có phân bổ cố định 166 MIO, 167 AAU và 167
-  UA-DETRAC; mở rộng dữ liệu chỉ sau khi artifact trên K230 ổn định.
-- Runtime và mọi replay vận hành khoá `class_id=0`, `confidence=0.50`.
-  Kết quả 0,25 không được đưa vào báo cáo vận hành.
+Được phép khởi tạo từ COCO YOLO11n cho smoke và final training. Tuy vậy, trọng số
+COCO nguyên bản không phải là model nhóm và không được biên dịch/phát hành cho K230.
+`team_model_manifest.json` phải lưu `base_weights`, `checkpoint`, `finetuned_on` và
+`training_run`. Cổng phát hành bắt buộc từ chối khi:
 
-## Cổng phát hành K230
+```text
+SHA256(final_checkpoint) == SHA256(base_weights)
+```
 
-Một `.kmodel` chỉ được phát hành khi có cùng release:
+Mã lỗi là `FINAL_CHECKPOINT_EQUALS_BASE_WEIGHTS`.
 
-1. checkpoint do pipeline team-model tạo ra và manifest provenance;
-2. ONNX/K230 compile xuất từ checkpoint đó, không phải artifact COCO cũ;
-3. log load model và inference thành công trên board/camera K230;
-4. các session DAY, NIGHT, RAIN, BACKLIT do K230 tự quay, gán nhãn, review và
-   khoá hoàn toàn ngoài train/validation;
-5. metric tách riêng AAU, UA-DETRAC và K230 theo confidence 0,50.
+| Cấp độ | Dữ liệu | Tham số |
+| --- | --- | --- |
+| Smoke pipeline | đúng 500 train image | 320 px, 25 epoch, seed 230 |
+| Final release | toàn bộ validated export | 320 px, 100 epoch, patience 20, seed 230 |
 
-Thiếu bất kỳ mục nào thì trạng thái là `NOT_MEASURED` hoặc
-`BLOCKED_BOARD_RUN_REQUIRED`, không được suy rộng mAP public cross-test thành
-hiệu năng camera thực địa.
+Config dùng đường dẫn tương đối; khi dataset/weights ở ngoài Git, truyền đường dẫn
+thật bằng CLI. Final training phải chạy lại report ở hai confidence sau khi hoàn tất.
+
+## Hợp đồng Host → K230
+
+- Host dùng Ultralytics, OpenCV và ByteTrack; đó là dependency phía PC, không phải
+  dependency CanMV.
+- K230 chỉ được load `.kmodel` được đóng gói bằng deployment contract có hash của
+  checkpoint-manifest và `.kmodel`. Sai/thiếu contract phải fail-closed với
+  `MODEL_LOAD_REJECTED`; không có COCO fallback.
+- Lớp, input và ngưỡng phải cố định: `vehicle` / class `0`, RGB NCHW 320×320
+  uint8, confidence `0.50`, NMS IoU `0.50`.
+- Host là nơi chạy state machine cảnh báo: median ground-plane speed, vào dừng ở
+  `<=2.0 km/h` trong 3 giây, chỉ đóng event sau `>=3.0 km/h` liên tục 1 giây.
+  K230 gửi detection/telemetry theo contract, không chạy một logic cảnh báo khác.
+- Board log phải có `MODEL_LOAD_OK`, `INFERENCE_OK`, hash manifest và hash kmodel
+  đúng với contract. Thiếu log/session K230 đã khoá thì trạng thái là
+  `NOT_MEASURED` / `BLOCKED_BOARD_RUN_REQUIRED`.
+
+Chi tiết file contract và đoạn tích hợp CanMV ở [`k230/README.md`](../../k230/README.md).

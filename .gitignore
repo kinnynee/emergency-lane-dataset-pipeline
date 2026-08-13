@@ -5,6 +5,11 @@ __pycache__/
 node_modules/
 runs/
 data_collection/dataset_output/
+data_collection/reports/smoke_test_v2/
+data_collection/reports/report_figures/internal_diagnostics/
+data_collection/configs/yolo11n_320_smoke_5ep.yaml
+tmp/
+tools/
 *.pt
 pip_replay_install.*.log
 .env

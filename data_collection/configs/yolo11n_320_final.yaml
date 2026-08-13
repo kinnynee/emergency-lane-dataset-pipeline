@@ -1,13 +1,13 @@
-# Pipeline-only smoke training: exactly 500 train images, not a performance release.
-# Paths are relative to this config file so a fresh clone can run after the
-# owner places the ignored dataset/weights at the documented locations or
-# provides command-line overrides.
+# Final team training: all rows of the validated export, never the 500-image
+# smoke subset. This remains reproducible in a fresh clone because all paths
+# are relative to this file and no local drive is embedded.
 model: ../../yolo11n.pt
 base_weights: ../../yolo11n.pt
 model_variant: YOLO11n
-training_stage: SMOKE_PIPELINE_ONLY
+training_stage: FINAL_FULL_DATASET
 imgsz: 320
-epochs: 25
+epochs: 100
+patience: 20
 batch: 16
 seed: 230
 deterministic: true
@@ -15,10 +15,7 @@ workers: 4
 optimizer: auto
 pretrained: true
 plots: false
-prediction_confidence: 0.50
-train_images: 500
-validation_images: 180
-cross_test_images: 180
+prediction_confidences: [0.0, 0.50]
 source_dataset: ../dataset_output/dataset-v1-full
 ua_annotation_roots:
   - ../storage_placeholders/online_data/raw/ua_detrac_orig/DETRAC-Train-Annotations-XML

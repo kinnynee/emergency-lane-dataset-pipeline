@@ -20,10 +20,10 @@ Use it as follows:
 
 ```powershell
 python host_yolo_loop.py `
-  --video "D:\UMT_Evidence\k230\lane_a.mp4" `
-  --model ".\yolo11n.pt" `
-  --speed-calibration "D:\UMT_Evidence\k230\calibration\lane_a.json" `
-  --roi-config "D:\UMT_Evidence\k230\calibration\lane_a_roi.json" `
+  --video ".\evidence\k230\lane_a.mp4" `
+  --model ".\runs\final\weights\best.pt" `
+  --speed-calibration ".\evidence\k230\calibration\lane_a.json" `
+  --roi-config ".\evidence\k230\calibration\lane_a_roi.json" `
   --classes 0
 ```
 

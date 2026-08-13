@@ -1,54 +1,34 @@
-"""CanMV K230 team-model bootstrap; fail closed when the release is invalid.
+"""CanMV K230 team-model bootstrap with a hash-bound, fail-closed contract.
 
-This board entry point deliberately uses only CanMV modules. It never imports
-Ultralytics, ByteTrack, OpenCV, or NumPy and never substitutes a COCO model.
-The camera/inference loop must only start after ``load_team_model`` succeeds.
+This intentionally imports no PC-side Ultralytics, ByteTrack, OpenCV or NumPy
+dependency.  Camera capture, preprocessing and matching YOLO11 decode are
+enabled only after this bootstrap has accepted the exact compiled artifact.
 """
 
-import os
-import ujson
-
-
-CONTRACT_PATH = "/sdcard/emergency_lane/runtime_contract.json"
-
-
-def load_contract(path=CONTRACT_PATH):
-    with open(path, "r") as handle:
-        contract = ujson.load(handle)
-    required = {
-        "format": "k230-team-model-runtime-v1",
-        "provenance": "TEAM_TRAINED_ONLY_NO_COCO_FALLBACK",
-        "input_size": 320,
-        "class_ids": [0],
-        "confidence": 0.5,
-        "output_decoder": "YOLO11_DETECT_ONE_CLASS",
-    }
-    for key in required:
-        if contract.get(key) != required[key]:
-            raise RuntimeError("RUNTIME_CONTRACT_MISMATCH:" + key)
-    return contract
+from team_model_config import DeploymentRejected, load_team_deployment
 
 
 def load_team_model(contract):
-    model_path = contract.get("kmodel_path", "")
-    if not model_path or not model_path.endswith(".kmodel") or model_path.find("coco") >= 0:
-        raise RuntimeError("INVALID_TEAM_KMODEL_PATH")
-    try:
-        os.stat(model_path)
-    except OSError:
-        raise RuntimeError("TEAM_KMODEL_NOT_FOUND:" + model_path)
+    """Load only the K230 artifact whose SHA-256 was verified by the contract."""
     import nncase_runtime as nn
+
     kpu = nn.kpu()
-    kpu.load_kmodel(model_path)
-    print("MODEL_LOAD_OK", model_path)
+    kpu.load_kmodel(contract["model"]["board_path"])
+    print("MODEL_LOAD_OK")
+    print("TEAM_MODEL_MANIFEST_SHA256=" + contract["team_model_manifest_sha256"])
+    print("KMODEL_SHA256=" + contract["model"]["kmodel_sha256"])
     return kpu
 
 
 def main():
-    contract = load_contract()
+    try:
+        contract = load_team_deployment()
+    except DeploymentRejected as exc:
+        print("MODEL_LOAD_REJECTED", exc)
+        raise
     load_team_model(contract)
     print("BOARD_RUNTIME_READY")
-    print("INFERENCE_NOT_STARTED: integrate camera tensor/preprocess/postprocess before release")
+    print("INFERENCE_NOT_STARTED: run camera/preprocess/YOLO11 decode before emitting INFERENCE_OK")
 
 
 if __name__ == "__main__":

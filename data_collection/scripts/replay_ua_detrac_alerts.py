@@ -24,8 +24,8 @@ from host_yolo_loop import (
     StopEvent,
     TrackState,
     close_event,
-    open_stop_event,
     point_in_roi,
+    update_stop_alert,
     update_speed_kmh,
 )
 
@@ -103,6 +103,8 @@ def _replay(
     calibration: GroundPlaneTransform,
     stop_speed_kmh: float,
     stop_seconds: float,
+    resume_speed_kmh: float,
+    resume_seconds: float,
     speed_window_s: float,
     max_track_gap_s: float,
 ) -> tuple[list[StopEvent], dict[int, list[tuple[int, tuple[float, float, float, float]]]]]:
@@ -122,18 +124,16 @@ def _replay(
                 continue
             ground_point = calibration.project(foot)
             speed_kmh = update_speed_kmh(state, now_s, ground_point, speed_window_s)
-            if speed_kmh is not None and speed_kmh <= stop_speed_kmh:
-                if state.stopped_since_s is None:
-                    state.stopped_since_s = state.ground_positions[0][0]
-                if now_s - state.stopped_since_s >= stop_seconds:
-                    if state.active_event is None:
-                        open_stop_event(state, track_id, now_s, speed_kmh, calibration.range_to_camera_m(foot), events)
-                    state.active_event.last_seen_at_s = now_s
-            elif speed_kmh is not None:
-                close_event(state, now_s, "MOTION_RESUMED")
+            update_stop_alert(
+                state, track_id, now_s, speed_kmh, calibration.range_to_camera_m(foot), events,
+                stop_speed_kmh=stop_speed_kmh,
+                stop_seconds=stop_seconds,
+                resume_speed_kmh=resume_speed_kmh,
+                resume_seconds=resume_seconds,
+            )
         for track_id, state in list(states.items()):
             if track_id not in seen and now_s - state.last_seen_s > max_track_gap_s:
-                close_event(state, state.last_seen_s, "TRACK_LOST")
+                close_event(state, state.last_seen_s, "TRACK_LOST", clear_history=True)
                 del states[track_id]
     end_s = (last_frame - 1) / fps
     for state in states.values():
@@ -236,6 +236,8 @@ def main() -> int:
     parser.add_argument("--fps", type=float, default=25.0)
     parser.add_argument("--stop-speed-kmh", type=float, default=2.0)
     parser.add_argument("--stop-seconds", type=float, default=3.0)
+    parser.add_argument("--resume-speed-kmh", type=float, default=3.0)
+    parser.add_argument("--resume-seconds", type=float, default=1.0)
     parser.add_argument("--speed-window-sec", type=float, default=1.5)
     parser.add_argument("--max-track-gap-sec", type=float, default=1.0)
     parser.add_argument("--expected-events", type=Path)
@@ -244,22 +246,28 @@ def main() -> int:
     parser.add_argument("--images-dir", type=Path)
     parser.add_argument("--annotated-video", type=Path)
     args = parser.parse_args()
-    if args.fps <= 0 or min(args.stop_speed_kmh, args.stop_seconds, args.speed_window_sec, args.max_track_gap_sec) <= 0:
+    if args.fps <= 0 or min(args.stop_speed_kmh, args.stop_seconds, args.resume_speed_kmh, args.resume_seconds, args.speed_window_sec, args.max_track_gap_sec) <= 0:
         parser.error("fps and all alert thresholds must be positive")
+    if args.resume_speed_kmh <= args.stop_speed_kmh:
+        parser.error("--resume-speed-kmh must be greater than --stop-speed-kmh")
     if (args.images_dir is None) != (args.annotated_video is None):
         parser.error("--images-dir and --annotated-video must be used together")
     sequence_id, frames = _tracks_from_xml(args.ua_xml)
     calibration = GroundPlaneTransform.from_file(args.speed_calibration)
     calibration.validate_frame_size(*args.frame_size)
     roi = _roi_pixels(args.fake_roi, args.frame_size)
-    events, replay_frames = _replay(frames, args.fps, roi, calibration, args.stop_speed_kmh, args.stop_seconds, args.speed_window_sec, args.max_track_gap_sec)
+    events, replay_frames = _replay(
+        frames, args.fps, roi, calibration,
+        args.stop_speed_kmh, args.stop_seconds, args.resume_speed_kmh, args.resume_seconds,
+        args.speed_window_sec, args.max_track_gap_sec,
+    )
     expected = _expected_events(args.expected_events, sequence_id)
     duration_s = (max(frames) - min(frames)) / args.fps
     metrics = {
         "sequence_id": sequence_id,
         "replay_source": "UA_DETRAC_GT_TRACK_IDS",
         "roi_status": "REPLAY_FAKE_ROI_NOT_DEPLOYMENT_CALIBRATION",
-        "rule_logic": "host_yolo_loop.TrackState/update_speed_kmh/open_stop_event/close_event",
+        "rule_logic": "host_yolo_loop.TrackState/update_speed_kmh(median)/update_stop_alert(hysteresis)",
         **_metrics(events, expected, duration_s),
     }
     _write_alerts(args.alerts, sequence_id, events, roi)

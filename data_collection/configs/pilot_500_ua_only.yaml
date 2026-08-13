@@ -7,5 +7,5 @@ expected_images_by_split:
   train: 355
   val: 105
   cross_test: 40
-status: "READY_TO_EXPORT_FROM_UMT_EVIDENCE"
+status: "READY_TO_EXPORT_FROM_CONFIGURED_SOURCE"
 notes: "Temporary pilot for training only. It does not claim the balanced three-source PILOT_500 allocation."

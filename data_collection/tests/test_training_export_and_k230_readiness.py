@@ -13,7 +13,9 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from export_ua_detrac_yolo import export_ua_detrac
+from create_k230_deployment_contract import build_contract
 from validate_k230_evaluation_readiness import validate_sessions
+from validate_team_model_release import validate_release
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -100,3 +102,87 @@ def test_k230_readiness_counts_only_locked_approved_self_recorded_sessions(tmp_p
     assert by_slice["BACKLIT"]["status"] == "BLOCKED_MISSING_DATA"
     assert by_slice["BACKLIT"]["current_evaluable_sequences"] == 0
     assert any("NOT_K230_SELF_RECORDED" in row["reason"] for row in diagnostics)
+
+
+def test_release_rejects_a_checkpoint_with_the_same_hash_as_base_weights(tmp_path: Path) -> None:
+    base = tmp_path / "yolo11n.pt"
+    checkpoint = tmp_path / "last.pt"
+    kmodel = tmp_path / "team.kmodel"
+    base.write_bytes(b"same weights are not a fine-tuned release")
+    checkpoint.write_bytes(base.read_bytes())
+    kmodel.write_bytes(b"compiled")
+    import hashlib
+
+    digest = hashlib.sha256(base.read_bytes()).hexdigest()
+    manifest = tmp_path / "team_model_manifest.json"
+    manifest.write_text(json.dumps({
+        "format": "team-yolo-release-v2",
+        "provenance": "FINETUNED_TEAM_MODEL_REQUIRED",
+        "architecture": "yolo11n",
+        "pretrained": True,
+        "class_names": {"0": "vehicle"},
+        "runtime": {"classes": [0], "confidence": 0.50},
+        "base_weights": {"path": str(base), "sha256": digest},
+        "checkpoint": {"path": str(checkpoint), "sha256": digest},
+        "finetuned_on": {
+            "dataset_path": "dataset_output/dataset-v1-full",
+            "target_class": "vehicle",
+            "class_mapping": "CAR_AND_APPROVED_FOUR_WHEEL_ONLY",
+            "train_images": 500,
+        },
+        "training_run": {
+            "run_directory": "runs/smoke",
+            "config": "yolo11n_320_smoke_v2_500.yaml",
+            "stage": "SMOKE_PIPELINE_ONLY",
+            "imgsz": 320,
+            "epochs": 25,
+            "seed": 230,
+        },
+    }), encoding="utf-8")
+
+    result = validate_release(manifest, kmodel, None)
+
+    assert result["release_status"] == "BLOCKED_BOARD_RUN_REQUIRED"
+    assert "FINAL_CHECKPOINT_EQUALS_BASE_WEIGHTS" in result["reason"]
+
+
+def test_release_requires_a_hash_bound_k230_contract_and_board_log(tmp_path: Path) -> None:
+    import hashlib
+
+    base = tmp_path / "yolo11n.pt"
+    checkpoint = tmp_path / "best.pt"
+    kmodel = tmp_path / "team_yolo11n_320.kmodel"
+    base.write_bytes(b"COCO base")
+    checkpoint.write_bytes(b"fine tuned team checkpoint")
+    kmodel.write_bytes(b"compiled team kmodel")
+    manifest = tmp_path / "team_model_manifest.json"
+    manifest.write_text(json.dumps({
+        "format": "team-yolo-release-v2",
+        "provenance": "FINETUNED_TEAM_MODEL_REQUIRED",
+        "architecture": "yolo11n",
+        "pretrained": True,
+        "class_names": {"0": "vehicle"},
+        "runtime": {"classes": [0], "confidence": 0.50},
+        "base_weights": {"path": str(base), "sha256": hashlib.sha256(base.read_bytes()).hexdigest()},
+        "checkpoint": {"path": str(checkpoint), "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest()},
+        "finetuned_on": {"dataset_path": "dataset_output/dataset-v1-full", "target_class": "vehicle", "class_mapping": "CAR_AND_APPROVED_FOUR_WHEEL_ONLY", "train_images": 1200},
+        "training_run": {"run_directory": "runs/final", "config": "yolo11n_320_final.yaml", "stage": "FINAL_FULL_DATASET", "imgsz": 320, "epochs": 100, "seed": 230},
+    }), encoding="utf-8")
+    contract = tmp_path / "team_deployment_contract.json"
+    payload = build_contract(manifest, kmodel, "/sdcard/model/team_yolo11n_320.kmodel")
+    contract.write_text(json.dumps(payload), encoding="utf-8")
+    log = tmp_path / "board.log"
+    log.write_text(
+        "MODEL_LOAD_OK\n"
+        f"TEAM_MODEL_MANIFEST_SHA256={payload['team_model_manifest_sha256']}\n"
+        f"KMODEL_SHA256={payload['model']['kmodel_sha256']}\n"
+        "INFERENCE_OK\n",
+        encoding="utf-8",
+    )
+
+    result = validate_release(manifest, kmodel, log, contract)
+
+    assert result["release_status"] == "READY_FOR_LOCKED_K230_TEST"
+    payload["detection"]["confidence"] = 0.25
+    contract.write_text(json.dumps(payload), encoding="utf-8")
+    assert "K230_DEPLOYMENT_CONTRACT_MISMATCH" in validate_release(manifest, kmodel, log, contract)["reason"]

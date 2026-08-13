@@ -37,6 +37,9 @@ MIO_DATASET = "MIO-TCD Localization"
 DEVICE_WIDTH = 640.0
 DEVICE_HEIGHT = 480.0
 IOU_THRESHOLDS = tuple(round(0.50 + step * 0.05, 2) for step in range(10))
+PRESENTATION_CONFIDENCES = (0.0, 0.50)
+# Kept for diagnostic helpers and legacy artifact readers; release metrics use
+# PRESENTATION_CONFIDENCES above.
 PRESENTATION_CONFIDENCE = 0.50
 MIN_CONDITION_IMAGES = 30
 MIN_CONDITION_BOXES = 100
@@ -135,11 +138,11 @@ def _match_predictions(samples: Sequence[EvaluationSample], iou_threshold: float
     return results, matched
 
 
-def average_precision(samples: Sequence[EvaluationSample], iou_threshold: float) -> float | None:
+def average_precision(samples: Sequence[EvaluationSample], iou_threshold: float, confidence: float = 0.0) -> float | None:
     ground_truth_count = sum(len(sample.labels) for sample in samples)
     if ground_truth_count == 0:
         return None
-    matches, _ = _match_predictions(samples, iou_threshold)
+    matches, _ = _match_predictions(samples, iou_threshold, confidence)
     if not matches:
         return 0.0
     true_positives = np.cumsum([int(is_true_positive) for _, is_true_positive in matches])
@@ -154,8 +157,8 @@ def average_precision(samples: Sequence[EvaluationSample], iou_threshold: float)
     return float(np.sum((recall_envelope[changes + 1] - recall_envelope[changes]) * precision_envelope[changes + 1]))
 
 
-def map50_95(samples: Sequence[EvaluationSample]) -> float | None:
-    values = [average_precision(samples, threshold) for threshold in IOU_THRESHOLDS]
+def map50_95(samples: Sequence[EvaluationSample], confidence: float = 0.0) -> float | None:
+    values = [average_precision(samples, threshold, confidence) for threshold in IOU_THRESHOLDS]
     available = [value for value in values if value is not None]
     return float(np.mean(available)) if available else None
 
@@ -186,10 +189,16 @@ def _scene_lookup(scene_metadata: Path) -> dict[tuple[str, str], dict[str, str]]
 
 
 def _ignored_regions_from_run(run_dir: Path) -> dict[str, list[tuple[float, float, float, float]]]:
-    config = yaml.safe_load((run_dir / "smoke_config.yaml").read_text(encoding="utf-8")) or {}
+    config_path = next(
+        (candidate for candidate in (run_dir / "smoke_config.yaml", run_dir / "training_config.yaml") if candidate.is_file()),
+        None,
+    )
+    if config_path is None:
+        raise FileNotFoundError("Expected smoke_config.yaml or training_config.yaml in the run directory")
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     roots = config.get("ua_annotation_roots")
     if not isinstance(roots, list) or not roots:
-        raise ValueError("smoke_config.yaml must list ua_annotation_roots for a total held-out metric")
+        raise ValueError(f"{config_path.name} must list ua_annotation_roots for a total held-out metric")
     result: dict[str, list[tuple[float, float, float, float]]] = {}
     for raw_root in roots:
         for sequence_id, regions in region_map_from_ua_annotations(Path(str(raw_root))).items():
@@ -330,8 +339,8 @@ def _condition_overlap(samples: Sequence[EvaluationSample]) -> dict[str, Any]:
     }
 
 
-def _recall_by_size(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]:
-    _, matched = _match_predictions(samples, iou_threshold=0.50, confidence=PRESENTATION_CONFIDENCE)
+def _recall_by_size(samples: Sequence[EvaluationSample], confidence: float = 0.50) -> list[dict[str, Any]]:
+    _, matched = _match_predictions(samples, iou_threshold=0.50, confidence=confidence)
     totals: defaultdict[str, int] = defaultdict(int)
     detected: defaultdict[str, int] = defaultdict(int)
     for sample in samples:
@@ -344,8 +353,9 @@ def _recall_by_size(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]
             "size_group_k230_640x480": group,
             "ground_truth_boxes": totals[group],
             "matched_at_iou_0_50": detected[group],
-            "recall_at_confidence_0_50": detected[group] / totals[group] if totals[group] else 0.0,
-            "metric_scope": "AAU RainSnow + UA-DETRAC Original cross_test only; MIO-TCD is train-only and excluded; UA ignored-region predictions excluded",
+            "confidence": confidence,
+            "recall_at_confidence": detected[group] / totals[group] if totals[group] else 0.0,
+            "metric_scope": f"AAU RainSnow + UA-DETRAC Original cross_test only; confidence {confidence:.2f}; MIO-TCD is train-only and excluded; UA ignored-region predictions excluded",
         }
         for group in ("<25 px", "25–49 px", "≥50 px")
     ]
@@ -354,33 +364,37 @@ def _recall_by_size(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]
 def _recall_by_dataset_size(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]:
     """Compute recall separately so a large UA slice cannot hide AAU weakness."""
     rows: list[dict[str, Any]] = []
-    for dataset in (AAU_DATASET, UA_DATASET):
-        subset = [sample for sample in samples if sample.dataset == dataset]
-        for row in _recall_by_size(subset):
-            rows.append({"dataset": dataset, **row})
+    for confidence in PRESENTATION_CONFIDENCES:
+        for dataset in (AAU_DATASET, UA_DATASET):
+            subset = [sample for sample in samples if sample.dataset == dataset]
+            for row in _recall_by_size(subset, confidence):
+                rows.append({"dataset": dataset, **row})
     return rows
 
 
 def _metric_by_dataset(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for dataset in (AAU_DATASET, UA_DATASET):
-        subset = [sample for sample in samples if sample.dataset == dataset]
-        if not subset:
+    for confidence in PRESENTATION_CONFIDENCES:
+        for dataset in (AAU_DATASET, UA_DATASET):
+            subset = [sample for sample in samples if sample.dataset == dataset]
+            if not subset:
+                rows.append({
+                    "dataset": dataset, "image_count": 0, "ground_truth_boxes": 0,
+                    "mAP50_95": "", "recall_at_confidence": "",
+                    "status": "NOT_MEASURED_MISSING_DOMAIN_SAMPLES", "confidence": confidence,
+                })
+                continue
+            _, matched = _match_predictions(subset, 0.50, confidence)
+            labels = sum(len(sample.labels) for sample in subset)
             rows.append({
-                "dataset": dataset, "image_count": 0, "ground_truth_boxes": 0,
-                "mAP50_95": "", "status": "NOT_MEASURED_MISSING_DOMAIN_SAMPLES",
-                "confidence": PRESENTATION_CONFIDENCE,
+                "dataset": dataset,
+                "image_count": len(subset),
+                "ground_truth_boxes": labels,
+                "mAP50_95": "" if (value := map50_95(subset, confidence)) is None else f"{value:.6f}",
+                "recall_at_confidence": f"{sum(matched.values()) / labels if labels else 0.0:.6f}",
+                "status": "MEASURED_CROSS_TEST",
+                "confidence": confidence,
             })
-            continue
-        value = map50_95(subset)
-        rows.append({
-            "dataset": dataset,
-            "image_count": len(subset),
-            "ground_truth_boxes": sum(len(sample.labels) for sample in subset),
-            "mAP50_95": "" if value is None else f"{value:.6f}",
-            "status": "MEASURED_CROSS_TEST",
-            "confidence": PRESENTATION_CONFIDENCE,
-        })
     return rows
 
 
@@ -606,12 +620,16 @@ def _plot_recall_by_size(rows: Sequence[dict[str, Any]], range_rows: Sequence[di
     plt.close(figure)
 
 
-def _plot_recall_by_dataset_size(rows: Sequence[dict[str, Any]], output: Path) -> None:
+def _plot_recall_by_dataset_size(rows: Sequence[dict[str, Any]], output: Path, confidence: float) -> None:
     groups = ("<25 px", "25â€“49 px", "â‰¥50 px")
     figure, axes = plt.subplots(1, 2, figsize=(13.0, 5.2), sharey=True)
     for axis, dataset in zip(axes, (AAU_DATASET, UA_DATASET)):
-        subset = {str(row["size_group_k230_640x480"]): row for row in rows if row["dataset"] == dataset}
-        values = [float(subset[group]["recall_at_confidence_0_50"]) * 100 for group in groups]
+        subset = {
+            str(row["size_group_k230_640x480"]): row
+            for row in rows
+            if row["dataset"] == dataset and float(row["confidence"]) == confidence
+        }
+        values = [float(subset[group]["recall_at_confidence"]) * 100 for group in groups]
         counts = [int(subset[group]["ground_truth_boxes"]) for group in groups]
         bars = axis.bar(groups, values, color=["#b4534d", "#d69742", "#3f8f5b"], width=0.62)
         for bar, value, count in zip(bars, values, counts):
@@ -620,9 +638,9 @@ def _plot_recall_by_dataset_size(rows: Sequence[dict[str, Any]], output: Path) -
         axis.set_title(dataset, weight="bold")
         axis.set_xlabel("Min(width, height) sau letterbox K230 640×480")
         axis.grid(axis="y", alpha=0.25)
-    axes[0].set_ylabel("Recall @ IoU 0.50, confidence 0.50 (%)")
+    axes[0].set_ylabel(f"Recall @ IoU 0.50, confidence {confidence:.2f} (%)")
     axes[0].set_ylim(0, 105)
-    figure.suptitle("A5. Recall theo domain và kích thước bbox — không gộp AAU + UA", fontsize=15, weight="bold")
+    figure.suptitle(f"A5. Recall theo domain, confidence {confidence:.2f} — không gộp AAU + UA", fontsize=15, weight="bold")
     figure.text(0.5, 0.01, "AAU small-bbox được giữ riêng vì không thể dùng kết quả UA để che điểm yếu domain AAU.", ha="center", fontsize=9, color="#7a2e2e")
     figure.tight_layout(rect=(0, 0.05, 1, 0.92))
     figure.savefig(output, dpi=200, bbox_inches="tight")
@@ -630,12 +648,12 @@ def _plot_recall_by_dataset_size(rows: Sequence[dict[str, Any]], output: Path) -
 
 
 def _diagnostics(samples: Sequence[EvaluationSample]) -> list[dict[str, Any]]:
-    _, matched = _match_predictions(samples, 0.50, PRESENTATION_CONFIDENCE)
+    _, matched = _match_predictions(samples, 0.50, 0.50)
     rows: list[dict[str, Any]] = []
     for sample in samples:
-        relevant_predictions = [box for box in sample.predictions if box.confidence >= PRESENTATION_CONFIDENCE]
+        relevant_predictions = [box for box in sample.predictions if box.confidence >= 0.50]
         local = EvaluationSample(sample.image_id, sample.image_path, sample.width, sample.height, sample.lighting, sample.weather, sample.labels, tuple(relevant_predictions))
-        local_matches, _ = _match_predictions([local], 0.50, PRESENTATION_CONFIDENCE)
+        local_matches, _ = _match_predictions([local], 0.50, 0.50)
         true_positives = sum(int(value) for _, value in local_matches)
         rows.append({
             "sample": sample,
@@ -680,7 +698,7 @@ def _render_examples(samples: Sequence[EvaluationSample], output: Path) -> None:
         for label in sample.labels:
             _draw_box(draw, label, scale_x, scale_y, x, y, "#31d36f")
         for prediction in sample.predictions:
-            if prediction.confidence >= PRESENTATION_CONFIDENCE:
+            if prediction.confidence >= 0.50:
                 _draw_box(draw, prediction, scale_x, scale_y, x, y, "#ff5959")
         color = "#6ee7a4" if status == "THÀNH CÔNG" else "#ff9b9b"
         draw.text(((index % 3) * tile_width + 8, (index // 3) * tile_height + 6), f"{status}: {sample.image_id}", fill=color, font=title_font)
@@ -882,19 +900,21 @@ def _write_separated_report(
     aau_proxy = next(row for row in analysis["bbox_size_by_dataset"] if row["dataset"] == AAU_DATASET)
     aau_small = next(
         row for row in recall_rows
-        if row["dataset"] == AAU_DATASET and row["size_group_k230_640x480"] == "<25 px"
+        if row["dataset"] == AAU_DATASET
+        and float(row["confidence"]) == 0.50
+        and row["size_group_k230_640x480"] == "<25 px"
     )
-    aau_small_recall = float(aau_small["recall_at_confidence_0_50"]) * 100
+    aau_small_recall = float(aau_small["recall_at_confidence"]) * 100
     metric_rows = "\n".join(
-        f"| {row['dataset']} | {row['image_count']} | {row['ground_truth_boxes']} | "
-        f"{(float(row['mAP50_95']) * 100 if row['mAP50_95'] else 'NOT_MEASURED')} | {row['status']} |"
+        f"| {row['dataset']} | {float(row['confidence']):.2f} | {row['image_count']} | {row['ground_truth_boxes']} | "
+        f"{(float(row['mAP50_95']) * 100 if row['mAP50_95'] else 'NOT_MEASURED')} | {row['recall_at_confidence'] or 'NOT_MEASURED'} | {row['status']} |"
         for row in domain_metrics
     )
     pipeline_table = "\n".join(
         f"| {row['stage']} | {row['metric']} | {row['value']} | {row['status']} |"
         for row in pipeline_rows
     )
-    report = f"""# Hình cho báo cáo đề tài — bản car-only, confidence 0,50
+    report = f"""# Hình cho báo cáo đề tài — bản car-only
 
 Chỉ dùng `cross_test` đã khoá. Không có số headline gộp AAU + UA-DETRAC;
 không có A4 và không dùng biểu đồ train+val+cross-test trong báo cáo.
@@ -914,16 +934,18 @@ chỉ có **{aau_proxy['roi_proxy_box_count']} bbox** trong proxy nên phải gh
 
 ## Kết quả detector tách riêng theo domain
 
-| Domain | Ảnh cross-test | Bbox | mAP50–95 | Trạng thái |
-|---|---:|---:|---:|---|
+| Domain | Confidence | Ảnh cross-test | Bbox | mAP50–95 | Recall @ IoU 0.50 | Trạng thái |
+|---|---:|---:|---:|---:|---:|---|
 {metric_rows}
 
-Mọi metric được rerun ở confidence **0,50**. Không dùng số confidence 0,25,
+Mọi metric được rerun ở confidence **0,00** và **0,50**. Không dùng số confidence 0,25,
 không cộng AAU và UA-DETRAC để che chênh lệch domain.
 
 ## A5. Recall theo domain và kích thước bbox
 
 ![A5 recall tách domain](A5_recall_by_dataset_size_confidence_050.png)
+
+![A5 recall tách domain, confidence 0,00](A5_recall_by_dataset_size_confidence_000.png)
 
 Điểm yếu phải nêu rõ: AAU ở nhóm `<25 px` có recall **{aau_small_recall:.1f}%**
 tại confidence 0,50 (mốc chẩn đoán trước đây xấp xỉ 16,7% phải được đối chiếu
@@ -1053,19 +1075,20 @@ def generate_report_figures(run_dir: Path, analysis_json: Path, scene_metadata: 
 
     cross_test_scope = (
         "Locked cross_test only; AAU RainSnow and UA-DETRAC Original are reported separately; "
-        "MIO-TCD is train-only and excluded; thresholded metrics use confidence 0.50"
+        "MIO-TCD is train-only and excluded; thresholded metrics use confidence 0.00 and 0.50"
     )
     domain_metrics = _metric_by_dataset(cross_test_samples)
     recall_rows = _recall_by_dataset_size(cross_test_samples)
-    _write_csv(output / "A5_recall_by_dataset_size_confidence_050.csv", list(recall_rows[0]), recall_rows)
-    _write_csv(output / "domain_metrics_cross_test_confidence_050.csv", list(domain_metrics[0]), domain_metrics)
-    _plot_recall_by_dataset_size(recall_rows, output / "A5_recall_by_dataset_size_confidence_050.png")
+    _write_csv(output / "A5_recall_by_dataset_size_confidence_000_and_050.csv", list(recall_rows[0]), recall_rows)
+    _write_csv(output / "domain_metrics_cross_test_confidence_000_and_050.csv", list(domain_metrics[0]), domain_metrics)
+    _plot_recall_by_dataset_size(recall_rows, output / "A5_recall_by_dataset_size_confidence_000.png", 0.0)
+    _plot_recall_by_dataset_size(recall_rows, output / "A5_recall_by_dataset_size_confidence_050.png", 0.50)
     _render_examples(cross_test_samples, output / "A7_success_and_failure_examples.png")
     pipeline_rows = [
         *[
             {
                 "stage": "PyTorch float32 on PC",
-                "metric": f"mAP50-95 {row['dataset']} cross_test, confidence 0.50",
+                "metric": f"mAP50-95 {row['dataset']} cross_test, confidence {float(row['confidence']):.2f}",
                 "value": f"{float(row['mAP50_95']) * 100:.2f}%" if row["mAP50_95"] else "NOT_MEASURED",
                 "status": row["status"],
             }
@@ -1073,7 +1096,7 @@ def generate_report_figures(run_dir: Path, analysis_json: Path, scene_metadata: 
         ],
         {
             "stage": "NNCase/K230 INT8 simulator",
-            "metric": "Per-domain cross_test at confidence 0.50",
+            "metric": "Per-domain cross_test at confidence 0.00 and 0.50",
             "value": "NOT_MEASURED",
             "status": "PENDING_SIMULATOR_EVALUATION",
         },
@@ -1090,7 +1113,7 @@ def generate_report_figures(run_dir: Path, analysis_json: Path, scene_metadata: 
         {"figure": "A2", "status": "READY_WITH_PROXY_LIMITATION", "reason": "Public-data ROI proxy only; AAU proxy n=2 is not reliable."},
         {"figure": "A3", "status": "APPENDIX_ONLY", "reason": "No valid ignored-region-filtered validation metrics per epoch."},
         {"figure": "A4", "status": "REMOVED", "reason": "Removed: aggregation and duplicate condition presentation are prohibited."},
-        {"figure": "A5", "status": "READY_SEPARATED_DOMAIN_SCOPE", "reason": "AAU and UA-DETRAC recall are separate at confidence 0.50."},
+        {"figure": "A5", "status": "READY_SEPARATED_DOMAIN_SCOPE", "reason": "AAU and UA-DETRAC recall are separate at confidence 0.00 and 0.50."},
         {"figure": "A6", "status": "PENDING", "reason": "Board run and locked K230 sessions are absent."},
         {"figure": "A7", "status": "READY_CROSS_TEST_SCOPE", "reason": "Success and failure samples come from cross_test."},
     ]
@@ -1099,7 +1122,7 @@ def generate_report_figures(run_dir: Path, analysis_json: Path, scene_metadata: 
     summary = {
         "output": str(output.resolve()),
         "evaluation_scope": cross_test_scope,
-        "confidence": PRESENTATION_CONFIDENCE,
+        "confidences": list(PRESENTATION_CONFIDENCES),
         "domain_metrics": domain_metrics,
         "recall_by_dataset_size": recall_rows,
         "pipeline_comparison": pipeline_rows,

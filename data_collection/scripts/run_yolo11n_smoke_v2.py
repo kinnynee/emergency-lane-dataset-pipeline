@@ -72,22 +72,30 @@ def _load_config(path: Path) -> dict[str, Any]:
     required = {
         "model", "model_variant", "imgsz", "epochs", "batch", "seed", "deterministic", "workers",
         "optimizer", "pretrained", "plots", "prediction_confidence", "train_images", "validation_images",
-        "cross_test_images", "source_dataset", "ua_annotation_roots",
+        "cross_test_images", "source_dataset", "ua_annotation_roots", "base_weights", "training_stage",
     }
     missing = sorted(required - set(config))
     if missing:
         raise ValueError(f"V2 config missing fields: {', '.join(missing)}")
-    if config["model_variant"] != "YOLO11n" or Path(str(config["model"])).suffix.lower() != ".yaml":
-        raise ValueError("The team model must be initialized from a YOLO11n .yaml architecture, never a COCO .pt checkpoint")
-    if bool(config["pretrained"]):
-        raise ValueError("pretrained must be false: COCO fallback/initialization is not permitted")
-    if config.get("model_provenance_policy") != "TEAM_TRAINED_ONLY_NO_COCO_FALLBACK":
-        raise ValueError("Missing TEAM_TRAINED_ONLY_NO_COCO_FALLBACK provenance policy")
+    if config["model_variant"] != "YOLO11n" or Path(str(config["model"])).suffix.lower() != ".pt":
+        raise ValueError("The smoke run must fine-tune a local YOLO11n .pt base checkpoint")
+    if not bool(config["pretrained"]):
+        raise ValueError("pretrained must be true: this smoke run validates transfer-learning provenance")
+    if config.get("model_provenance_policy") != "FINETUNED_TEAM_MODEL_REQUIRED":
+        raise ValueError("Missing FINETUNED_TEAM_MODEL_REQUIRED provenance policy")
+    if config["training_stage"] != "SMOKE_PIPELINE_ONLY":
+        raise ValueError("This runner accepts only training_stage=SMOKE_PIPELINE_ONLY")
     if int(config["imgsz"]) != 320 or not 20 <= int(config["epochs"]) <= 30:
         raise ValueError("V2 requires imgsz=320 and 20–30 epochs")
     if int(config["train_images"]) != 500:
         raise ValueError("The initial team-model run requires the deterministic 500-train-image smoke selection")
     return config
+
+
+def _resolve_config_path(config_path: Path, configured_path: str | Path) -> Path:
+    """Resolve a local configurable path without embedding a machine drive."""
+    candidate = Path(configured_path)
+    return candidate if candidate.is_absolute() else (config_path.parent / candidate).resolve()
 
 
 def _load_ua_ignored_regions(roots: Iterable[Path]) -> dict[str, list[IgnoredRegion]]:
@@ -238,7 +246,7 @@ def _plot_losses(results: Path, output: Path) -> dict[str, list[float]]:
     figure, axis = plt.subplots(figsize=(8.5, 4.8))
     for field, label in zip(fields, ("box loss", "cls loss", "dfl loss")):
         axis.plot(range(1, len(result[field]) + 1), result[field], marker="o", label=label)
-    axis.set(xlabel="Epoch", ylabel="Train loss", title="YOLO11n 500-image team-model smoke: train losses")
+    axis.set(xlabel="Epoch", ylabel="Train loss", title="YOLO11n 500-image fine-tuning smoke: train losses")
     axis.grid(alpha=0.25)
     axis.legend()
     figure.tight_layout()
@@ -320,25 +328,61 @@ Artifacts: `dataset/metadata/images.csv`, `dataset/metadata/annotations.csv`, `d
     (run_dir / "smoke_test_v2_report.md").write_text(summary, encoding="utf-8")
 
 
-def _write_team_model_manifest(run_dir: Path, config: dict[str, Any], weights: Path) -> None:
-    """Bind a trained checkpoint to the no-COCO runtime contract."""
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _write_team_model_manifest(
+    run_dir: Path,
+    config: dict[str, Any],
+    weights: Path,
+    base_weights: Path,
+    config_path: Path,
+    source_dataset: Path,
+) -> None:
+    """Bind a fine-tuned checkpoint to its COCO base and training evidence."""
+    checkpoint_sha256 = _sha256(weights)
+    base_sha256 = _sha256(base_weights)
+    if checkpoint_sha256 == base_sha256:
+        raise RuntimeError("Final checkpoint equals base weights; rejecting model release")
     manifest = {
-        "format": "team-yolo-release-v1",
-        "provenance": "TEAM_TRAINED_ONLY_NO_COCO_FALLBACK",
-        "architecture": str(config["model"]),
+        "format": "team-yolo-release-v2",
+        "provenance": "FINETUNED_TEAM_MODEL_REQUIRED",
+        "architecture": "yolo11n",
         "pretrained": bool(config["pretrained"]),
         "class_names": {"0": "vehicle"},
         "positive_policy": "CAR_AND_APPROVED_FOUR_WHEEL_ONLY",
         "runtime": {"classes": [0], "confidence": 0.50},
+        "base_weights": {
+            "name": base_weights.name,
+            "path": str(base_weights.resolve()),
+            "sha256": base_sha256,
+            "bytes": base_weights.stat().st_size,
+        },
         "checkpoint": {
             "path": str(weights.resolve()),
-            "sha256": hashlib.sha256(weights.read_bytes()).hexdigest(),
+            "sha256": checkpoint_sha256,
             "bytes": weights.stat().st_size,
         },
-        "dataset": {
+        "finetuned_on": {
+            "dataset_path": str(source_dataset.resolve()),
+            "target_class": "vehicle",
+            "class_mapping": "CAR_AND_APPROVED_FOUR_WHEEL_ONLY",
             "train_images": int(config["train_images"]),
             "validation_images": int(config["validation_images"]),
             "cross_test_images": int(config["cross_test_images"]),
+        },
+        "training_run": {
+            "run_directory": str(run_dir.resolve()),
+            "config": config_path.name,
+            "stage": str(config["training_stage"]),
+            "imgsz": int(config["imgsz"]),
+            "epochs": int(config["epochs"]),
+            "seed": int(config["seed"]),
         },
     }
     (run_dir / "team_model_manifest.json").write_text(
@@ -351,29 +395,38 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=REPO_ROOT / "data_collection" / "configs" / "yolo11n_320_smoke_v2_500.yaml")
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--source-dataset", type=Path, help="Override source_dataset from the config (useful when data lives outside the clone).")
-    parser.add_argument("--ua-annotation-root", action="append", type=Path, help="Override ua_annotation_roots; repeat for multiple directories.")
+    parser.add_argument("--source-dataset", type=Path, help="Override the relative source_dataset configured in YAML.")
+    parser.add_argument("--ua-annotation-root", type=Path, action="append", help="Override/append a UA XML root; repeat for train and test XML roots.")
     args = parser.parse_args()
-    config = _load_config(args.config.resolve())
-    source_path = args.source_dataset or Path(config["source_dataset"])
-    source = (source_path if source_path.is_absolute() else REPO_ROOT / source_path).resolve()
+    config_path = args.config.resolve()
+    config = _load_config(config_path)
+    source = args.source_dataset.resolve() if args.source_dataset else _resolve_config_path(config_path, str(config["source_dataset"]))
     run_dir = args.run_dir.resolve()
-    annotation_roots = []
-    for item in args.ua_annotation_root or config["ua_annotation_roots"]:
-        path = Path(item)
-        annotation_roots.append((path if path.is_absolute() else REPO_ROOT / path).resolve())
-    ignored_by_sequence = _load_ua_ignored_regions(annotation_roots)
+    annotation_roots = args.ua_annotation_root or [_resolve_config_path(config_path, str(item)) for item in config["ua_annotation_roots"]]
+    ignored_by_sequence = _load_ua_ignored_regions(path.resolve() for path in annotation_roots)
+    base_weights = _resolve_config_path(config_path, str(config["base_weights"]))
+    if not base_weights.is_file():
+        raise FileNotFoundError(f"Fine-tuning base weights not found: {base_weights}")
     started = datetime.now(timezone.utc)
     subset = _build_subset(source, run_dir, int(config["seed"]), ignored_by_sequence)
     validation = validate_dataset(run_dir / "dataset")
     (run_dir / "dataset_validation.json").write_text(json.dumps(validation, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if validation["status"] != "PASS":
         raise RuntimeError(f"Derived V2 subset failed QC: {validation['errors']}")
-    shutil.copy2(args.config, run_dir / "smoke_config.yaml")
+    # Persist the resolved inputs with the run.  The source YAML remains
+    # portable, while report generation from another working directory must
+    # not reinterpret its relative paths against that new directory.
+    run_config = dict(config)
+    run_config["source_dataset"] = str(source)
+    run_config["base_weights"] = str(base_weights)
+    run_config["ua_annotation_roots"] = [str(path.resolve()) for path in annotation_roots]
+    (run_dir / "smoke_config.yaml").write_text(
+        yaml.safe_dump(run_config, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
     _render_train_batch(run_dir / "dataset", run_dir / "train_batch0.jpg")
     from ultralytics import YOLO
 
-    YOLO(str(config["model"])).train(
+    YOLO(str(base_weights)).train(
         data=str((run_dir / "dataset" / "data.yaml").resolve()), imgsz=int(config["imgsz"]), epochs=int(config["epochs"]),
         batch=int(config["batch"]), seed=int(config["seed"]), deterministic=bool(config["deterministic"]), workers=int(config["workers"]),
         optimizer=config["optimizer"], pretrained=bool(config["pretrained"]), plots=False, val=False, save=True,
@@ -383,7 +436,7 @@ def main() -> int:
     weights = run_dir / "weights" / "last.pt"
     if not weights.is_file():
         raise FileNotFoundError(f"Expected trained weights were not written: {weights}")
-    _write_team_model_manifest(run_dir, config, weights)
+    _write_team_model_manifest(run_dir, config, weights, base_weights, config_path, source)
     images, _ = _read_csv(run_dir / "dataset" / "metadata" / "images.csv")
     metadata = {row["image_id"]: row for row in images}
     predictions = _render_validation_predictions(weights, run_dir / "dataset", metadata, ignored_by_sequence, run_dir / "val_predictions_vs_labels.png", run_dir / "val_prediction_counts.csv", float(config["prediction_confidence"]), args.device)

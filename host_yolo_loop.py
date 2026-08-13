@@ -13,6 +13,7 @@ import argparse
 import csv
 import json
 import math
+import statistics
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -183,6 +184,7 @@ class StopEvent:
 class TrackState:
     ground_positions: Deque[tuple[float, float, float]] = field(default_factory=deque)
     stopped_since_s: float | None = None
+    moving_since_s: float | None = None
     last_seen_s: float = 0.0
     active_event: StopEvent | None = None
 
@@ -299,17 +301,29 @@ def update_speed_kmh(
     ground_point: GroundPoint,
     window_s: float,
 ) -> float | None:
-    """Return speed in km/h measured across the calibrated ground-plane window."""
+    """Return a median ground-plane speed across the calibrated time window.
+
+    A bbox can wobble by a few pixels while a vehicle is stationary.  Measuring
+    only the last two frames magnifies that wobble at video frame rates.  Each
+    eligible history point therefore supplies an independent displacement over
+    at least half of the configured window; the median rejects isolated jitter
+    without hiding sustained motion.
+    """
+    if window_s <= 0:
+        raise ValueError("window_s must be positive")
     state.ground_positions.append((now_s, ground_point[0], ground_point[1]))
     while state.ground_positions and state.ground_positions[0][0] < now_s - window_s:
         state.ground_positions.popleft()
-    if len(state.ground_positions) < 2:
-        return None
-    started_at_s, start_x, start_y = state.ground_positions[0]
-    duration_s = now_s - started_at_s
-    if duration_s <= 0:
-        return None
-    return 3.6 * math.hypot(ground_point[0] - start_x, ground_point[1] - start_y) / duration_s
+    minimum_baseline_s = max(0.25, window_s * 0.5)
+    candidates = []
+    for started_at_s, start_x, start_y in state.ground_positions:
+        duration_s = now_s - started_at_s
+        if duration_s < minimum_baseline_s:
+            continue
+        candidates.append(
+            3.6 * math.hypot(ground_point[0] - start_x, ground_point[1] - start_y) / duration_s
+        )
+    return float(statistics.median(candidates)) if candidates else None
 
 
 def open_stop_event(
@@ -334,13 +348,76 @@ def open_stop_event(
     return event
 
 
-def close_event(state: TrackState, now_s: float, reason: str) -> None:
+def close_event(state: TrackState, now_s: float, reason: str, *, clear_history: bool = False) -> None:
+    """Close an active alert without discarding motion history by default.
+
+    Keeping the history prevents the next estimate from being calculated from
+    one frame after a transient motion/noise transition.  Callers that discard
+    a track entirely may set ``clear_history=True``.
+    """
     if state.active_event is not None:
         state.active_event.ended_at_s = now_s
         state.active_event.end_reason = reason
         state.active_event = None
-    state.ground_positions.clear()
     state.stopped_since_s = None
+    state.moving_since_s = None
+    if clear_history:
+        state.ground_positions.clear()
+
+
+def update_stop_alert(
+    state: TrackState,
+    track_id: int,
+    now_s: float,
+    speed_kmh: float | None,
+    range_to_camera_m: float,
+    events: list[StopEvent],
+    *,
+    stop_speed_kmh: float,
+    stop_seconds: float,
+    resume_speed_kmh: float,
+    resume_seconds: float,
+) -> bool:
+    """Advance the stopped-vehicle state machine with speed hysteresis.
+
+    A vehicle enters the alert path only after staying at or below
+    ``stop_speed_kmh`` for ``stop_seconds``.  Once alerted it stays alerted
+    through the hysteresis band and is closed only after sustained speed at or
+    above ``resume_speed_kmh``.  This keeps 1--3 px bbox noise from repeatedly
+    closing and reopening a valid stopped-vehicle alert.
+    """
+    if not 0 < stop_speed_kmh < resume_speed_kmh:
+        raise ValueError("resume_speed_kmh must be greater than stop_speed_kmh")
+    if stop_seconds <= 0 or resume_seconds <= 0:
+        raise ValueError("stop_seconds and resume_seconds must be positive")
+    if speed_kmh is None:
+        return state.active_event is not None
+
+    if state.active_event is None:
+        if speed_kmh <= stop_speed_kmh:
+            state.moving_since_s = None
+            if state.stopped_since_s is None:
+                state.stopped_since_s = now_s
+            if now_s - state.stopped_since_s >= stop_seconds:
+                open_stop_event(state, track_id, now_s, speed_kmh, range_to_camera_m, events)
+        elif speed_kmh >= resume_speed_kmh:
+            # A clearly moving observation invalidates an unconfirmed stop.
+            state.stopped_since_s = None
+            state.moving_since_s = now_s
+        # Within the hysteresis band, retain the prior candidate state.
+        return state.active_event is not None
+
+    if speed_kmh >= resume_speed_kmh:
+        if state.moving_since_s is None:
+            state.moving_since_s = now_s
+        if now_s - state.moving_since_s >= resume_seconds:
+            close_event(state, now_s, "MOTION_RESUMED")
+    elif speed_kmh <= stop_speed_kmh:
+        state.moving_since_s = None
+    # Keep an active event in the hysteresis band.
+    if state.active_event is not None:
+        state.active_event.last_seen_at_s = now_s
+    return state.active_event is not None
 
 
 def write_events(
@@ -419,6 +496,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--speed-window-sec", type=float, default=1.5, help="Ground-plane interval used to estimate km/h.")
     parser.add_argument("--stop-speed-kmh", type=float, default=2.0, help="Maximum calibrated speed that counts as stationary.")
     parser.add_argument("--stop-seconds", type=float, default=3.0, help="Seconds below stop speed inside ROI before alert.")
+    parser.add_argument("--resume-speed-kmh", type=float, default=3.0, help="Speed that begins the sustained moving state; must exceed --stop-speed-kmh.")
+    parser.add_argument("--resume-seconds", type=float, default=1.0, help="Continuous seconds above --resume-speed-kmh needed to close an alert.")
     parser.add_argument("--max-track-gap-sec", type=float, default=1.0, help="Close an alert after a missing track exceeds this gap.")
     parser.add_argument("--frame-stride", type=int, default=1, help="Process every Nth frame; keep 1 for final review.")
     parser.add_argument("--max-frames", type=int, default=0, help="Stop after this many decoded frames; 0 processes all.")
@@ -446,8 +525,10 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError(f"ROI config not found: {args.roi_config}")
     if not 0 < args.confidence <= 1 or not 0 < args.iou <= 1:
         raise ValueError("--confidence and --iou must be in (0, 1]")
-    if min(args.speed_window_sec, args.stop_speed_kmh, args.stop_seconds, args.max_track_gap_sec) <= 0:
+    if min(args.speed_window_sec, args.stop_speed_kmh, args.stop_seconds, args.resume_speed_kmh, args.resume_seconds, args.max_track_gap_sec) <= 0:
         raise ValueError("Speed and stop thresholds must be positive")
+    if args.resume_speed_kmh <= args.stop_speed_kmh:
+        raise ValueError("--resume-speed-kmh must be greater than --stop-speed-kmh")
     if args.frame_stride < 1 or args.max_frames < 0:
         raise ValueError("--frame-stride must be >= 1 and --max-frames must be >= 0")
 
@@ -546,17 +627,15 @@ def main() -> int:
                         ground_point = calibration.project(foot)
                         range_to_camera_m = calibration.range_to_camera_m(foot)
                         speed_kmh = update_speed_kmh(state, now_s, ground_point, args.speed_window_sec)
-                        if speed_kmh is not None and speed_kmh <= args.stop_speed_kmh:
-                            if state.stopped_since_s is None:
-                                state.stopped_since_s = state.ground_positions[0][0]
-                            if now_s - state.stopped_since_s >= args.stop_seconds:
-                                is_stopped = True
-                                stopped_now.add(track_id)
-                                if state.active_event is None:
-                                    open_stop_event(state, track_id, now_s, speed_kmh, range_to_camera_m, events)
-                                state.active_event.last_seen_at_s = now_s
-                        elif speed_kmh is not None:
-                            close_event(state, now_s, "MOTION_RESUMED")
+                        is_stopped = update_stop_alert(
+                            state, track_id, now_s, speed_kmh, range_to_camera_m, events,
+                            stop_speed_kmh=args.stop_speed_kmh,
+                            stop_seconds=args.stop_seconds,
+                            resume_speed_kmh=args.resume_speed_kmh,
+                            resume_seconds=args.resume_seconds,
+                        )
+                        if is_stopped:
+                            stopped_now.add(track_id)
                     else:
                         close_event(state, now_s, "LEFT_ROI")
 
@@ -569,7 +648,7 @@ def main() -> int:
 
             for track_id, state in list(states.items()):
                 if track_id not in seen_ids and now_s - state.last_seen_s > args.max_track_gap_sec:
-                    close_event(state, state.last_seen_s, "TRACK_LOST")
+                    close_event(state, state.last_seen_s, "TRACK_LOST", clear_history=True)
                     del states[track_id]
 
             roi_color = (0, 0, 255) if stopped_now else (0, 215, 255)
