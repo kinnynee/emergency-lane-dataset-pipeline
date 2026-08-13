@@ -1,0 +1,18 @@
+{
+  "status": "REQUIRES_TEAM_MODEL_RERUN",
+  "confidence": 0.5,
+  "evaluation_scope": "AAU RainSnow and UA-DETRAC Original reported separately; no aggregate public cross-test metric; K230 is NOT_MEASURED",
+  "invalidated_artifacts": [
+    "A4_map_by_condition_cross_test.png",
+    "A4_map_by_condition_cross_test.csv",
+    "A5_recall_by_k230_bbox_size_and_range.png",
+    "A5_recall_by_k230_bbox_size.csv"
+  ],
+  "required_next_command": "Train the 500-image team model, then rerun generate_report_figures.py with the resulting run directory.",
+  "statuses": [
+    {"figure": "A2", "status": "READY_WITH_PROXY_LIMITATION", "reason": "AAU ROI proxy has only 2 boxes; not reliable."},
+    {"figure": "A4", "status": "REMOVED", "reason": "Aggregate and duplicate presentation prohibited."},
+    {"figure": "A5", "status": "PENDING_TEAM_MODEL_RERUN_AT_CONFIDENCE_050", "reason": "Report AAU and UA-DETRAC separately."},
+    {"figure": "A6", "status": "BLOCKED_BOARD_RUN_REQUIRED", "reason": "No verified team-model board inference or locked K230 test."}
+  ]
+}

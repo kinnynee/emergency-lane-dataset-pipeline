@@ -1,0 +1,9 @@
+{
+  "camera_id": "REPLACE_WITH_FIXED_K230_CAMERA_ID",
+  "frame_size_px": [1280, 720],
+  "status": "DRAFT_UNCALIBRATED",
+  "normalized_polygon": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+  "calibration_method": "Trace the confirmed emergency-lane boundary on this fixed camera; independently review before changing status to CALIBRATED.",
+  "verified_at": "YYYY-MM-DD",
+  "verified_by": "REPLACE_WITH_REVIEWER"
+}

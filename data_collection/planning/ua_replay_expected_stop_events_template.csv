@@ -1,0 +1,2 @@
+event_id,sequence_id,track_id,expected_start_s,expected_end_s,approval_status,reviewer,notes
+EXAMPLE_NOT_DATA,MVI_00000,1,0.000,0.000,PENDING,,Replace this row with manually reviewed stopped-in-fake-ROI event intervals before measuring FAR/miss/latency.

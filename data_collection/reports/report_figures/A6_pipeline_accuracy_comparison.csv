@@ -1,0 +1,4 @@
+stage,metric,value,status
+PyTorch float32 trên PC,"Custom mAP50–95, tổng AAU + UA cross-test",46.42%,AVAILABLE
+NNCase/K230 INT8 simulator,Cùng cross-test và cùng post-processing,N/A,PENDING_SIMULATOR_EVALUATION
+K230 board INT8,Cùng cross-test trên thiết bị,N/A,BLOCKED_BOARD_RUN_REQUIRED

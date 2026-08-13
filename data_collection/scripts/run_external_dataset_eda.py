@@ -1315,7 +1315,7 @@ def run(args: argparse.Namespace) -> int:
     bbox_stats, bbox_samples = _bbox_statistics(analyzed)
     conditions = [row for result in analyzed for row in result.get("conditions", [])]
     viewpoints = assess_viewpoints(analyzed)
-    plans, manifest, splits = create_plan(analyzed, split_policy)
+    plans, manifest, splits = create_plan(analyzed, split_policy, road_type_config)
     split_by_sequence: dict[tuple[str, str], str] = {}
     for row in splits:
         dataset_name = str(row["dataset_name"])

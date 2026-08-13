@@ -1,0 +1,8 @@
+figure,status,reason
+A1,READY,Architecture diagram remains valid.
+A2,READY_WITH_PROXY_LIMITATION,AAU has only 2 bbox in the public ROI proxy; result is not reliable.
+A3,APPENDIX_ONLY,No valid ignored-region-filtered validation metric by epoch.
+A4,REMOVED,No train/val/cross-test aggregate or duplicate performance chart is allowed.
+A5,PENDING_TEAM_MODEL_RERUN_AT_CONFIDENCE_050,Must show AAU and UA-DETRAC separately after car-only team-model rerun.
+A6,BLOCKED_BOARD_RUN_REQUIRED,No verified team-model board load/inference or locked K230 main test.
+A7,PENDING_TEAM_MODEL_RERUN_AT_CONFIDENCE_050,Examples must use the new team-model output.

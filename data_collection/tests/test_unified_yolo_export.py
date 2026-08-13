@@ -16,6 +16,8 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from export_unified_yolo import export_unified_yolo
+from ignored_region import filter_boxes_by_ignored_region
+from analyze_yolo_bbox_sizes import analyze_bbox_sizes
 from extract_condition_frames import _conditions
 from validate_pilot_500 import validate_pilot_500
 from validate_yolo_dataset import validate_dataset
@@ -66,9 +68,11 @@ def _make_aau(path: Path) -> None:
     )
 
 
-def _make_ua(path: Path, image_path: Path) -> None:
+def _make_ua(path: Path, image_path: Path, include_ignored_region: bool = False) -> None:
     image_path.write_bytes(_jpeg_bytes())
-    xml = """<sequence name="MVI_40172">
+    ignored = '<ignored_region><box left="0" top="0" width="20" height="20"/></ignored_region>' if include_ignored_region else ""
+    xml = f"""<sequence name="MVI_40172">
+  {ignored}
   <frame num="1"><target_list>
     <target id="1"><box left="90" top="10" width="20" height="20"/><attribute vehicle_type="car"/></target>
     <target id="79"><box left="10" top="5" width="20" height="20"/><attribute vehicle_type="others"/></target>
@@ -101,13 +105,43 @@ def test_unified_export_is_one_class_and_reconciles_counts(tmp_path: Path) -> No
     assert report["status"] == "PASS"
     assert summary["images_by_split"] == {"cross_test": 1, "train": 2, "val": 1}
     assert summary["counts"]["exported_boxes"] == 3
-    assert summary["counts"]["rejected_annotations"] == 3
+    assert summary["counts"]["rejected_annotations"] == 2
+    assert summary["counts"]["ignored_annotations"] == 1
     assert (output / "data.yaml").read_text(encoding="utf-8").find("vehicle") >= 0
     assert (output / "labels" / "train" / "MIO_mio_negative.txt").read_text(encoding="utf-8") == ""
+    with (output / "metadata" / "negative_samples.csv").open(encoding="utf-8", newline="") as handle:
+        negatives = list(csv.DictReader(handle))
+    assert any(row["image_id"] == "MIO_mio_negative" for row in negatives)
     with (output / "metadata" / "annotations.csv").open(encoding="utf-8", newline="") as handle:
         annotations = list(csv.DictReader(handle))
     assert {row["class_id"] for row in annotations} == {"0"}
     assert {row["original_class"] for row in annotations} == {"car"}
+    (output / "metadata" / "negative_samples.csv").write_text(
+        "image_id,dataset,split,sequence_id,frame_id,exported_image,exported_label,negative_reason\n",
+        encoding="utf-8",
+    )
+    assert "UNREGISTERED_EMPTY_LABEL:train/MIO_mio_negative" in validate_dataset(output)["errors"]
+
+
+def test_bbox_size_eda_uses_letterbox_scale_and_25px_rule(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    metadata = dataset / "metadata"
+    metadata.mkdir(parents=True)
+    (metadata / "images.csv").write_text(
+        "image_id,split,width,height\nimage_a,train,640,320\nimage_b,val,320,320\n",
+        encoding="utf-8",
+    )
+    (metadata / "annotations.csv").write_text(
+        "image_id,clipped_xmin,clipped_ymin,clipped_xmax,clipped_ymax\n"
+        "image_a,0,0,40,20\n"  # 20x10 after letterbox: below 25 by longest side
+        "image_b,0,0,30,10\n",  # 30x10 after letterbox: not below 25
+        encoding="utf-8",
+    )
+    report = analyze_bbox_sizes(dataset)
+    assert report["box_count"] == 2
+    assert report["under_threshold_count"] == 1
+    assert report["under_threshold_ratio"] == 0.5
+    assert (metadata / "eda" / "bbox_size_320_histogram.png").is_file()
 
 
 def test_unified_export_accepts_extracted_ua_directory(tmp_path: Path) -> None:
@@ -130,6 +164,31 @@ def test_unified_export_accepts_extracted_ua_directory(tmp_path: Path) -> None:
     assert summary["images_by_split"] == {"cross_test": 1}
     assert (output / "images" / "cross_test" / "UA_MVI_40172_00001.jpg").is_file()
     assert validate_dataset(output)["status"] == "PASS"
+
+
+def test_ua_ignored_region_is_masked_only_for_train_and_prediction_centres_are_filtered(tmp_path: Path) -> None:
+    ua = tmp_path / "ua.zip"
+    image = tmp_path / "ua.jpg"
+    _make_ua(ua, image, include_ignored_region=True)
+    split = tmp_path / "split.csv"
+    split.write_text(
+        "dataset_name,sequence_id,proposed_split\n"
+        "UA-DETRAC Original,MVI_40172,EXTERNAL_TRAIN\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "dataset"
+    summary = export_unified_yolo(None, None, ua, output, split, MAPPING)
+    with Image.open(output / "images" / "train" / "UA_MVI_40172_00001.jpg") as masked:
+        assert max(masked.convert("RGB").getpixel((10, 10))) <= 5
+        assert min(masked.convert("RGB").getpixel((50, 25))) >= 100
+    with (output / "metadata" / "images.csv").open(encoding="utf-8", newline="") as handle:
+        row = next(csv.DictReader(handle))
+    assert row["ignored_region_mask_applied"] == "True"
+    assert row["ignored_region_count"] == "1"
+    assert summary["counts"]["ignored_region_masked_images"] == 1
+    kept, ignored = filter_boxes_by_ignored_region([(1, 1, 5, 5), (40, 10, 60, 30)], [(0, 0, 20, 20)])
+    assert kept == [(40, 10, 60, 30)]
+    assert ignored == [(1, 1, 5, 5)]
 
 
 def test_backlit_extraction_requires_manual_review() -> None:

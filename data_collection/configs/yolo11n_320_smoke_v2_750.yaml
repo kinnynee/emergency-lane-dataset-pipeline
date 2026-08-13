@@ -1,0 +1,23 @@
+# Team-model smoke configuration.  It deliberately starts from the YOLO11n
+# architecture, not a COCO checkpoint; only the generated team checkpoint may
+# be compiled or used in a replay/board run.
+model: yolo11n.yaml
+model_variant: YOLO11n
+imgsz: 320
+epochs: 25
+batch: 16
+seed: 230
+deterministic: true
+workers: 4
+optimizer: auto
+pretrained: false
+plots: false
+prediction_confidence: 0.50
+train_images: 500
+validation_images: 180
+cross_test_images: 180
+source_dataset: D:/UMT_EVIDENCE/dataset-v1-full
+ua_annotation_roots:
+  - D:/UMT_EVIDENCE/DETRAC-Train-Annotations-XML
+  - D:/UMT_EVIDENCE/DETRAC-Test-Annotations-XML
+model_provenance_policy: TEAM_TRAINED_ONLY_NO_COCO_FALLBACK

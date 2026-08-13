@@ -1,15 +1,19 @@
-mapping_version: "2.1"
-review_status: "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION_2026_08_02"
+mapping_version: "3.0"
+review_status: "CAR_ONLY_POLICY_PENDING_REEXPORT_2026_08_13"
 target_class: vehicle
 preserve_original_class: true
-policy: "Include all motor vehicles, including motorcycles; exclude pedestrians and bicycles."
+policy: "Retain approved four-wheel motor vehicles as the one positive detector class. Motorcycle, motorbike and bicycle annotations are never positive labels; valid boxes are retained as IGNORE_REGION and black-masked only in derived training images so they are not silently learned as background."
+ignore_region_policy:
+  training_image_action: BLACK_MASK_DERIVED_EXPORT_ONLY
+  evaluation_action: EXCLUDE_PREDICTIONS_WITH_CENTER_IN_IGNORE_REGION
+  annotation_manifest: metadata/ignored_annotations.csv
 
 mio_tcd:
   articulated_truck: {mapped_class: vehicle, include: true, review_required: false}
-  bicycle: {mapped_class: null, include: false, review_required: false}
+  bicycle: {mapped_class: null, include: false, handling: IGNORE_REGION, review_required: false}
   bus: {mapped_class: vehicle, include: true, review_required: false}
   car: {mapped_class: vehicle, include: true, review_required: false}
-  motorcycle: {mapped_class: vehicle, include: true, review_required: false}
+  motorcycle: {mapped_class: null, include: false, handling: IGNORE_REGION, review_required: false}
   motorized_vehicle: {mapped_class: vehicle, include: true, review_required: false}
   non-motorized_vehicle: {mapped_class: null, include: false, review_required: false}
   pedestrian: {mapped_class: null, include: false, review_required: false}
@@ -18,10 +22,10 @@ mio_tcd:
   work_van: {mapped_class: vehicle, include: true, review_required: false}
 
 aau_rainsnow:
-  bicycle: {mapped_class: null, include: false, review_required: false}
+  bicycle: {mapped_class: null, include: false, handling: IGNORE_REGION, review_required: false}
   bus: {mapped_class: vehicle, include: true, review_required: false}
   car: {mapped_class: vehicle, include: true, review_required: false}
-  motorbike: {mapped_class: vehicle, include: true, review_required: false}
+  motorbike: {mapped_class: null, include: false, handling: IGNORE_REGION, review_required: false}
   truck: {mapped_class: vehicle, include: true, review_required: false}
   person: {mapped_class: null, include: false, review_required: false}
 

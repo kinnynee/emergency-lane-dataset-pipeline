@@ -36,6 +36,7 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 - [`data_collection/reports/external_eda/k230_holdout_plan.csv`](data_collection/reports/external_eda/k230_holdout_plan.csv): planned road-type coverage for the future K230 holdout.
 - [`data_collection/reports/external_eda/evaluation_slice_readiness.csv`](data_collection/reports/external_eda/evaluation_slice_readiness.csv): readiness of the required DAY/NIGHT/BACKLIT/RAIN mAP slices.
 - [`data_collection/reports/external_eda/ua_yolo_export_smoke_test.md`](data_collection/reports/external_eda/ua_yolo_export_smoke_test.md): real-media evidence that clipped boxes reach YOLO labels.
+- [`CALIBRATION_AND_ROI.md`](CALIBRATION_AND_ROI.md): required fixed-camera ground-plane calibration for reporting vehicle distance in metres, and calibrated polygon ROI workflow.
 
 ## Quick verification
 

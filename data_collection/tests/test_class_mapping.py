@@ -10,16 +10,21 @@ from external_eda_common import load_yaml
 from run_external_dataset_eda import _normalize_bbox_class_mapping
 
 
-def test_supervisor_vehicle_policy_is_applied() -> None:
+def test_car_only_policy_moves_two_wheel_classes_to_ignore_regions() -> None:
     mapping = load_yaml(Path(__file__).resolve().parents[1] / "configs" / "vehicle_class_mapping.yaml")
     assert mapping["target_class"] == "vehicle"
     assert mapping["preserve_original_class"] is True
-    assert mapping["mio_tcd"]["motorcycle"]["include"] is True
-    assert mapping["aau_rainsnow"]["motorbike"]["mapped_class"] == "vehicle"
+    assert mapping["mio_tcd"]["motorcycle"] == {
+        "mapped_class": None,
+        "include": False,
+        "handling": "IGNORE_REGION",
+        "review_required": False,
+    }
+    assert mapping["aau_rainsnow"]["motorbike"]["handling"] == "IGNORE_REGION"
     assert mapping["ua_detrac"]["others"]["include"] is True
     others = mapping["ua_detrac"]["others"]
     assert others["review_required"] is False
-    assert "DATA_LEAD_APPROVED_WITH_TRACK_EXCLUSION" in mapping["review_status"]
+    assert "CAR_ONLY_POLICY_PENDING_REEXPORT" in mapping["review_status"]
     assert "all 74 unique others tracks" in others["review_note"]
     assert others["track_exclusions"] == [
         {
@@ -36,7 +41,9 @@ def test_person_is_not_mapped_to_vehicle() -> None:
     assert mapping["mio_tcd"]["pedestrian"]["mapped_class"] is None
     assert mapping["aau_rainsnow"]["person"]["mapped_class"] is None
     assert mapping["mio_tcd"]["bicycle"]["include"] is False
+    assert mapping["mio_tcd"]["bicycle"]["handling"] == "IGNORE_REGION"
     assert mapping["aau_rainsnow"]["bicycle"]["include"] is False
+    assert mapping["aau_rainsnow"]["bicycle"]["handling"] == "IGNORE_REGION"
 
 
 def test_cached_bbox_mapping_is_corrected_to_config() -> None:

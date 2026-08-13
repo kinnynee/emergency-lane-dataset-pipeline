@@ -2,8 +2,10 @@
 
 The exporter is deliberately conservative: MIO is always train-only, AAU and
 UA-DETRAC are split by their complete sequence, and an existing output is
-never overwritten.  Every retained annotation records its source class; every
-rejected annotation records why it was not exported.
+never overwritten. Every retained annotation records its source class; every
+rejected annotation records why it was not exported. Two-wheel annotations are
+a separate third state: they are retained as ignore regions and are never
+silently converted into negative/background training examples.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ import yaml
 from PIL import Image
 
 from external_eda_common import ROOT, clip_bbox_to_image, load_yaml, read_csv, safe_sequence, validate_bbox
+from ignored_region import IgnoredRegion, mask_image_bytes, parse_ua_ignored_regions
 
 
 DEFAULT_MIO = ROOT / "storage_placeholders" / "online_data" / "raw" / "mio_tcd" / "MIO-TCD-Localization.tar"
@@ -48,7 +51,7 @@ IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 IMAGE_FIELDS = [
     "image_id", "dataset", "split", "sequence_id", "frame_id", "source_image",
     "exported_image", "exported_label", "width", "height", "vehicle_box_count",
-    "boundary_clipped_box_count",
+    "boundary_clipped_box_count", "ignored_region_mask_applied", "ignored_region_count",
 ]
 ANNOTATION_FIELDS = [
     "image_id", "dataset", "split", "sequence_id", "frame_id", "annotation_id", "track_id",
@@ -60,7 +63,16 @@ REJECTED_FIELDS = [
     "dataset", "image_id", "sequence_id", "frame_id", "annotation_id", "track_id", "original_class",
     "source_image", "source_annotation", "action", "reason",
 ]
+IGNORED_ANNOTATION_FIELDS = [
+    "image_id", "dataset", "split", "sequence_id", "frame_id", "annotation_id", "track_id",
+    "original_class", "source_image", "source_annotation", "xmin", "ymin", "xmax", "ymax",
+    "handling", "reason",
+]
 SEQUENCE_FIELDS = ["dataset", "sequence_id", "split", "split_source"]
+NEGATIVE_FIELDS = [
+    "image_id", "dataset", "split", "sequence_id", "frame_id",
+    "exported_image", "exported_label", "negative_reason",
+]
 
 PILOT_DATASETS = {
     "MIO-TCD Localization",
@@ -343,9 +355,13 @@ class _DatasetWriter:
         self._image_writer = csv.DictWriter(self._stack.enter_context((metadata / "images.csv").open("w", encoding="utf-8", newline="")), fieldnames=IMAGE_FIELDS, extrasaction="ignore")
         self._annotation_writer = csv.DictWriter(self._stack.enter_context((metadata / "annotations.csv").open("w", encoding="utf-8", newline="")), fieldnames=ANNOTATION_FIELDS, extrasaction="ignore")
         self._rejected_writer = csv.DictWriter(self._stack.enter_context((metadata / "rejected_annotations.csv").open("w", encoding="utf-8", newline="")), fieldnames=REJECTED_FIELDS, extrasaction="ignore")
+        self._ignored_writer = csv.DictWriter(self._stack.enter_context((metadata / "ignored_annotations.csv").open("w", encoding="utf-8", newline="")), fieldnames=IGNORED_ANNOTATION_FIELDS, extrasaction="ignore")
+        self._negative_writer = csv.DictWriter(self._stack.enter_context((metadata / "negative_samples.csv").open("w", encoding="utf-8", newline="")), fieldnames=NEGATIVE_FIELDS, extrasaction="ignore")
         self._image_writer.writeheader()
         self._annotation_writer.writeheader()
         self._rejected_writer.writeheader()
+        self._ignored_writer.writeheader()
+        self._negative_writer.writeheader()
         self.counts: Counter[str] = Counter()
         self.dataset_counts: defaultdict[str, Counter[str]] = defaultdict(Counter)
         self.images_by_split: Counter[str] = Counter()
@@ -396,6 +412,8 @@ class _DatasetWriter:
         image_bytes: bytes,
         annotations: Iterable[dict[str, Any]],
         exclusions: set[tuple[str, str]] | None = None,
+        ignored_regions: Iterable[IgnoredRegion] | None = None,
+        mask_ignored_regions: bool = False,
     ) -> None:
         if split not in SPLIT_NAMES.values():
             raise ValueError(f"Unsupported output split {split}")
@@ -408,6 +426,8 @@ class _DatasetWriter:
         suffix = Path(source_image).suffix.lower()
         if suffix not in IMAGE_SUFFIXES:
             raise ValueError(f"Unsupported image extension for {source_image}")
+        ignored_region_list = list(ignored_regions or [])
+        class_ignore_regions: list[IgnoredRegion] = []
         lines: list[str] = []
         clipped_count = 0
         rules = self.mapping.get(mapping_key, {})
@@ -419,6 +439,34 @@ class _DatasetWriter:
             original_class = str(row.get("original_class", "")).strip()
             rule = rules.get(original_class)
             if rule is None or not rule.get("include", False):
+                if rule is not None and rule.get("handling") == "IGNORE_REGION":
+                    coords = tuple(_as_float(row.get(key)) for key in ("xmin", "ymin", "xmax", "ymax"))
+                    if any(value is None for value in coords):
+                        self.counts["rejected_annotations"] += 1
+                        self.dataset_counts[dataset]["rejected_annotations"] += 1
+                        self._rejected_writer.writerow({**row, "action": "EXCLUDE_INVALID_IGNORE_REGION", "reason": "NON_NUMERIC_OR_NONFINITE_BOX"})
+                        continue
+                    xmin, ymin, xmax, ymax = coords  # type: ignore[misc]
+                    if xmin >= xmax or ymin >= ymax:
+                        self.counts["rejected_annotations"] += 1
+                        self.dataset_counts[dataset]["rejected_annotations"] += 1
+                        self._rejected_writer.writerow({**row, "action": "EXCLUDE_INVALID_IGNORE_REGION", "reason": "NON_POSITIVE_SIZE"})
+                        continue
+                    clipped, _ = clip_bbox_to_image(xmin, ymin, xmax, ymax, width, height)
+                    issues = validate_bbox(*clipped, width, height)
+                    if issues:
+                        self.counts["rejected_annotations"] += 1
+                        self.dataset_counts[dataset]["rejected_annotations"] += 1
+                        self._rejected_writer.writerow({**row, "action": "EXCLUDE_INVALID_IGNORE_REGION", "reason": "|".join(issues)})
+                        continue
+                    class_ignore_regions.append(clipped)
+                    self.counts["ignored_annotations"] += 1
+                    self.dataset_counts[dataset]["ignored_annotations"] += 1
+                    self._ignored_writer.writerow({
+                        **row, "xmin": clipped[0], "ymin": clipped[1], "xmax": clipped[2], "ymax": clipped[3],
+                        "handling": "IGNORE_REGION", "reason": "NON_TARGET_TWO_WHEEL_OR_BICYCLE",
+                    })
+                    continue
                 self.counts["rejected_annotations"] += 1
                 self.dataset_counts[dataset]["rejected_annotations"] += 1
                 self._rejected_writer.writerow({**row, "action": "EXCLUDE_CLASS", "reason": "CLASS_NOT_INCLUDED"})
@@ -465,6 +513,14 @@ class _DatasetWriter:
                 "clipped_xmin": clipped[0], "clipped_ymin": clipped[1], "clipped_xmax": clipped[2], "clipped_ymax": clipped[3],
                 "clip_applied": bool(adjustments), "clip_adjustments": "|".join(adjustments), "preserve_original_class": True,
             })
+        ignored_region_list.extend(class_ignore_regions)
+        ignored_region_mask_applied = bool(split == "train" and mask_ignored_regions and ignored_region_list)
+        if ignored_region_mask_applied:
+            image_bytes = mask_image_bytes(image_bytes, ignored_region_list, source_image)
+            self.counts["ignored_region_masked_images"] += 1
+            self.counts["ignored_region_count"] += len(ignored_region_list)
+            self.dataset_counts[dataset]["ignored_region_masked_images"] += 1
+            self.dataset_counts[dataset]["ignored_region_count"] += len(ignored_region_list)
         image_target = self.output / "images" / split / f"{image_id}{suffix}"
         label_target = self.output / "labels" / split / f"{image_id}.txt"
         image_target.write_bytes(image_bytes)
@@ -475,7 +531,17 @@ class _DatasetWriter:
             "exported_image": image_target.relative_to(self.output).as_posix(),
             "exported_label": label_target.relative_to(self.output).as_posix(),
             "width": width, "height": height, "vehicle_box_count": len(lines), "boundary_clipped_box_count": clipped_count,
+            "ignored_region_mask_applied": ignored_region_mask_applied,
+            "ignored_region_count": len(ignored_region_list),
         })
+        if not lines:
+            self._negative_writer.writerow({
+                "image_id": image_id, "dataset": dataset, "split": split,
+                "sequence_id": sequence_id, "frame_id": frame_id,
+                "exported_image": image_target.relative_to(self.output).as_posix(),
+                "exported_label": label_target.relative_to(self.output).as_posix(),
+                "negative_reason": "NO_RETAINED_POSITIVE_ANNOTATIONS_IGNORE_REGIONS_MASKED" if class_ignore_regions else "NO_RETAINED_VEHICLE_ANNOTATIONS",
+            })
         self.counts["exported_images"] += 1
         self.dataset_counts[dataset]["exported_images"] += 1
         self.images_by_split[split] += 1
@@ -488,7 +554,7 @@ class _DatasetWriter:
         selection_metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         self.close()
-        if self.counts["input_annotations"] != self.counts["exported_boxes"] + self.counts["rejected_annotations"]:
+        if self.counts["input_annotations"] != self.counts["exported_boxes"] + self.counts["rejected_annotations"] + self.counts["ignored_annotations"]:
             raise AssertionError("Annotation count reconciliation failed before summary")
         metadata = self.output / "metadata"
         with (metadata / "sequence_splits.csv").open("w", encoding="utf-8", newline="") as handle:
@@ -575,7 +641,7 @@ def _export_mio(writer: _DatasetWriter, mio_path: Path, selection: _Selection | 
                 binary = archive.extractfile(member)
                 if binary is None:
                     raise RuntimeError(f"Could not read MIO image {source}")
-                writer.add_image(dataset="MIO-TCD Localization", mapping_key="mio_tcd", image_id=f"MIO_{_safe_id(source_id)}", split="train", sequence_id=sequence, frame_id=source_id, source_image=source, image_bytes=binary.read(), annotations=rows.for_image(source_id))
+                writer.add_image(dataset="MIO-TCD Localization", mapping_key="mio_tcd", image_id=f"MIO_{_safe_id(source_id)}", split="train", sequence_id=sequence, frame_id=source_id, source_image=source, image_bytes=binary.read(), annotations=rows.for_image(source_id), mask_ignored_regions=True)
                 if selection is not None:
                     selection.consume("MIO-TCD Localization", source)
 
@@ -609,12 +675,19 @@ def _export_aau(writer: _DatasetWriter, aau_path: Path, split_map: dict[tuple[st
                     continue
                 split = _aau_split(split_map, sequence)
                 writer.register_sequence("AAU RainSnow", sequence, split, "split_proposal.csv")
-                writer.add_image(dataset="AAU RainSnow", mapping_key="aau_rainsnow", image_id=f"AAU_{image_key}", split=split, sequence_id=sequence, frame_id=str(image_key), source_image=file_name, image_bytes=source.read(file_name), annotations=rows.for_image(image_key))
+                writer.add_image(dataset="AAU RainSnow", mapping_key="aau_rainsnow", image_id=f"AAU_{image_key}", split=split, sequence_id=sequence, frame_id=str(image_key), source_image=file_name, image_bytes=source.read(file_name), annotations=rows.for_image(image_key), mask_ignored_regions=True)
                 if selection is not None:
                     selection.consume("AAU RainSnow", file_name)
 
 
-def _export_ua(writer: _DatasetWriter, ua_path: Path, split_map: dict[tuple[str, str], str], mapping: dict[str, Any], selection: _Selection | None = None) -> None:
+def _export_ua(
+    writer: _DatasetWriter,
+    ua_path: Path,
+    split_map: dict[tuple[str, str], str],
+    mapping: dict[str, Any],
+    selection: _Selection | None = None,
+    mask_ignored_regions: bool = True,
+) -> None:
     exclusions = {
         (str(row.get("sequence_id", "")), str(row.get("track_id", "")))
         for row in mapping.get("ua_detrac", {}).get("others", {}).get("track_exclusions", [])
@@ -637,6 +710,7 @@ def _export_ua(writer: _DatasetWriter, ua_path: Path, split_map: dict[tuple[str,
             root = ET.fromstring(source.read(xml_name))
             sequence = root.attrib.get("name") or Path(xml_name).stem
             split = _ua_split(split_map, sequence)
+            ignored_regions = parse_ua_ignored_regions(root)
             for frame in root.findall("frame"):
                 frame_id = int(frame.attrib.get("num", "0"))
                 source_image = by_frame.get((sequence, frame_id))
@@ -658,7 +732,13 @@ def _export_ua(writer: _DatasetWriter, ua_path: Path, split_map: dict[tuple[str,
                 if selection is not None and not selection.includes("UA-DETRAC Original", source_image):
                     continue
                 writer.register_sequence("UA-DETRAC Original", sequence, split, "split_proposal.csv")
-                writer.add_image(dataset="UA-DETRAC Original", mapping_key="ua_detrac", image_id=f"UA_{sequence}_{frame_id:05d}", split=split, sequence_id=sequence, frame_id=str(frame_id), source_image=source_image, image_bytes=source.read(source_image), annotations=annotations, exclusions=exclusions)
+                writer.add_image(
+                    dataset="UA-DETRAC Original", mapping_key="ua_detrac",
+                    image_id=f"UA_{sequence}_{frame_id:05d}", split=split, sequence_id=sequence,
+                    frame_id=str(frame_id), source_image=source_image, image_bytes=source.read(source_image),
+                    annotations=annotations, exclusions=exclusions, ignored_regions=ignored_regions,
+                    mask_ignored_regions=mask_ignored_regions,
+                )
                 if selection is not None:
                     selection.consume("UA-DETRAC Original", source_image)
 
@@ -674,6 +754,7 @@ def export_unified_yolo(
     selection_subset: str | None = None,
     allow_proposal_selection: bool = False,
     selection_datasets: set[str] | None = None,
+    mask_ua_ignored_regions: bool = True,
 ) -> dict[str, Any]:
     """Run the complete export and return the reconciliation summary."""
     mapping = load_yaml(mapping_path)
@@ -696,7 +777,7 @@ def export_unified_yolo(
         if aau_path is not None:
             _export_aau(writer, aau_path, split_map, selection)
         if ua_path is not None:
-            _export_ua(writer, ua_path, split_map, mapping, selection)
+            _export_ua(writer, ua_path, split_map, mapping, selection, mask_ua_ignored_regions)
         if selection is not None:
             selection.assert_complete(writer)
             selection.write_snapshot(output)
@@ -730,11 +811,12 @@ def main() -> int:
     parser.add_argument("--selection-manifest", type=Path, help="CSV manifest used to select an exact subset")
     parser.add_argument("--selection-subset", help="Value of target_subset to export from --selection-manifest")
     parser.add_argument("--allow-proposal-selection", action="store_true", help="Explicitly allow rows whose selected column is not TRUE")
+    parser.add_argument("--no-mask-ua-ignored-regions", action="store_true", help="Diagnostic only: do not black-mask UA ignored regions in training images")
     args = parser.parse_args()
     summary = export_unified_yolo(
         args.mio_path.resolve(), args.aau_path.resolve(), args.ua_path.resolve(), args.output.resolve(),
         args.split_path.resolve(), args.mapping_path.resolve(), args.selection_manifest.resolve() if args.selection_manifest else None,
-        args.selection_subset, args.allow_proposal_selection,
+        args.selection_subset, args.allow_proposal_selection, mask_ua_ignored_regions=not args.no_mask_ua_ignored_regions,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0

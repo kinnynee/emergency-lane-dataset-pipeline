@@ -91,9 +91,52 @@ def _unique_candidates(result: dict[str, Any]) -> list[dict[str, Any]]:
     return ordered
 
 
+def _assessment_for(
+    dataset: str,
+    sequence: str,
+    split_policy: dict[str, Any],
+    scene_config: dict[str, Any],
+) -> dict[str, Any]:
+    """Return verified scene metadata for the eventual sequence-level split."""
+    normalized, _ = _split_group(dataset, sequence, split_policy)
+    assessment = scene_config.get("assessments", {}).get(dataset, {}).get(normalized)
+    if not isinstance(assessment, dict):
+        raise ValueError(f"Cannot balance before road/environment review: missing metadata for {dataset}/{normalized}")
+    unknown = [field for field in ("road_type", "weather", "lighting") if str(assessment.get(field, "UNKNOWN")) == "UNKNOWN"]
+    if unknown:
+        raise ValueError(
+            f"Cannot balance before road/environment review: {dataset}/{normalized} has UNKNOWN {','.join(unknown)}"
+        )
+    return assessment
+
+
+def _scene_stratified_candidates(
+    candidates: list[dict[str, Any]],
+    dataset: str,
+    split_policy: dict[str, Any],
+    scene_config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Round-robin verified road/weather/light strata before sampling any plan."""
+    strata: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for candidate in candidates:
+        assessment = _assessment_for(dataset, str(candidate.get("sequence_name", "")), split_policy, scene_config)
+        strata[(str(assessment["road_type"]), str(assessment["weather"]), str(assessment["lighting"]))].append(candidate)
+    for values in strata.values():
+        values.sort(key=lambda row: (str(row.get("sequence_name", "")), str(row.get("source_file", ""))))
+    ordered: list[dict[str, Any]] = []
+    while strata:
+        for key in sorted(list(strata)):
+            values = strata[key]
+            ordered.append(values.pop(0))
+            if not values:
+                strata.pop(key)
+    return ordered
+
+
 def create_plan(
     results: list[dict[str, Any]],
     split_policy: dict[str, Any] | None = None,
+    scene_config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     split_policy = split_policy or {}
     plans: list[dict[str, Any]] = []
@@ -105,6 +148,8 @@ def create_plan(
             dataset = result["dataset_name"]
             target = allocation[dataset]
             candidates = _unique_candidates(result)
+            if scene_config is not None:
+                candidates = _scene_stratified_candidates(candidates, dataset, split_policy, scene_config)
             proposed = min(target, len(candidates))
             plans.append(
                 {
@@ -114,7 +159,7 @@ def create_plan(
                     "available_candidates_in_analysis": len(candidates),
                     "proposed_images": proposed,
                     "shortfall": target - proposed,
-                    "selection_unit": "sequence_then_file",
+                    "selection_unit": "verified_road_weather_lighting_stratum_then_sequence_then_file" if scene_config is not None else "sequence_then_file",
                     "apply_status": "PROPOSAL_ONLY",
                     "notes": "Ưu tiên sequence khác nhau; cần manual review điều kiện khó.",
                 }
