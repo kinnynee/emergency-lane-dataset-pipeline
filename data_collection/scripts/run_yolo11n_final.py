@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,20 @@ from run_yolo11n_smoke_v2 import (
     _write_team_model_manifest,
 )
 from validate_yolo_dataset import validate_dataset
+
+
+UA_XML_DIRECTORIES = (
+    "DETRAC-Train-Annotations-XML",
+    "DETRAC-Test-Annotations-XML",
+)
+
+
+class FinalTrainingPreflightError(RuntimeError):
+    """Raised before QC/training when required external inputs are absent."""
+
+    def __init__(self, missing: list[Path]) -> None:
+        self.missing = missing
+        super().__init__("FINAL TRAINING BLOCKED\nMissing:\n" + "\n".join(f"- {path}" for path in missing))
 
 
 def _load_final_config(path: Path) -> dict[str, Any]:
@@ -50,6 +63,41 @@ def _load_final_config(path: Path) -> dict[str, Any]:
     return config
 
 
+def _resolve_ua_annotation_roots(inputs: list[Path]) -> list[Path]:
+    """Accept XML directories or their common parent without guessing data.
+
+    The documented command passes ``D:\\UMT_EVIDENCE`` once.  Config files can
+    still list the two XML directories directly.  In either form the result is
+    the explicit train/test XML paths required for ignored-region processing.
+    """
+    resolved: dict[str, Path] = {}
+    for raw_path in inputs:
+        path = raw_path.resolve()
+        if path.name in UA_XML_DIRECTORIES:
+            resolved[path.name] = path
+        else:
+            for directory in UA_XML_DIRECTORIES:
+                resolved[directory] = path / directory
+    return [resolved.get(directory, Path(directory)) for directory in UA_XML_DIRECTORIES]
+
+
+def _preflight_final_training_inputs(source: Path, annotation_inputs: list[Path]) -> list[Path]:
+    """Validate every external input before dataset QC or Ultralytics import."""
+    source = source.resolve()
+    required_dataset_paths = [
+        source,
+        source / "images",
+        source / "labels",
+        source / "metadata" / "export_summary.json",
+    ]
+    annotation_roots = _resolve_ua_annotation_roots(annotation_inputs)
+    missing = [path for path in [*required_dataset_paths, *annotation_roots] if not path.exists()]
+    if missing:
+        raise FinalTrainingPreflightError(missing)
+    print("Preflight: PASS")
+    return annotation_roots
+
+
 def _data_yaml(source: Path, run_dir: Path) -> Path:
     """Write a portable Ultralytics data file that references every split."""
     payload = {
@@ -69,23 +117,27 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=REPO_ROOT / "data_collection" / "configs" / "yolo11n_320_final.yaml")
     parser.add_argument("--run-dir", required=True, type=Path, help="New output directory; never an existing run.")
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--source-dataset", type=Path, help="Override source_dataset from config.")
-    parser.add_argument("--ua-annotation-root", type=Path, action="append", help="Override/append UA XML roots for ignore-region validation.")
+    parser.add_argument("--source-dataset", type=Path, help="Override source_dataset from config; the external validated export root.")
+    parser.add_argument("--ua-annotation-root", type=Path, action="append", help="Override UA XML inputs. Pass their common parent once (for example D:/UMT_EVIDENCE) or pass both XML directories.")
     args = parser.parse_args()
 
     config_path = args.config.resolve()
     config = _load_final_config(config_path)
+    source = args.source_dataset.resolve() if args.source_dataset else _resolve_config_path(config_path, str(config["source_dataset"]))
+    configured_annotation_inputs = args.ua_annotation_root or [
+        _resolve_config_path(config_path, str(item)) for item in config["ua_annotation_roots"]
+    ]
+    annotation_roots = _preflight_final_training_inputs(source, configured_annotation_inputs)
     run_dir = args.run_dir.resolve()
     if run_dir.exists():
         raise FileExistsError(f"Refusing to overwrite existing final run: {run_dir}")
-    source = args.source_dataset.resolve() if args.source_dataset else _resolve_config_path(config_path, str(config["source_dataset"]))
     validation = validate_dataset(source)
     if validation["status"] != "PASS":
         raise RuntimeError(f"Full export failed QC: {validation['errors']}")
+    print("QC: PASS")
     base_weights = _resolve_config_path(config_path, str(config["base_weights"]))
     if not base_weights.is_file():
         raise FileNotFoundError(f"Fine-tuning base weights not found: {base_weights}")
-    annotation_roots = args.ua_annotation_root or [_resolve_config_path(config_path, str(item)) for item in config["ua_annotation_roots"]]
     _load_ua_ignored_regions(path.resolve() for path in annotation_roots)
 
     run_dir.mkdir(parents=True)
@@ -102,6 +154,7 @@ def main() -> int:
     started = datetime.now(timezone.utc)
     from ultralytics import YOLO
 
+    print("Starting final training...")
     YOLO(str(base_weights)).train(
         data=str(data_yaml), imgsz=320, epochs=100, patience=20, batch=int(config["batch"]),
         seed=230, deterministic=bool(config["deterministic"]), workers=int(config["workers"]),

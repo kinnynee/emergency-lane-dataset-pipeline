@@ -28,7 +28,19 @@ Mã lỗi là `FINAL_CHECKPOINT_EQUALS_BASE_WEIGHTS`.
 | Final release | toàn bộ validated export | 320 px, 100 epoch, patience 20, seed 230 |
 
 Config dùng đường dẫn tương đối; khi dataset/weights ở ngoài Git, truyền đường dẫn
-thật bằng CLI. Final training phải chạy lại report ở hai confidence sau khi hoàn tất.
+thật bằng CLI. Với layout external chuẩn, chạy final training bằng:
+
+```powershell
+python data_collection/scripts/run_yolo11n_final.py `
+  --run-dir runs/final-320-100ep-seed230 `
+  --source-dataset "D:\UMT_EVIDENCE\dataset-v1-full" `
+  --ua-annotation-root "D:\UMT_EVIDENCE"
+```
+
+Preflight phải xác nhận `images/`, `labels/`, `metadata/export_summary.json`
+và cả hai XML directory trước QC; thiếu bất kỳ mục nào thì dừng với danh sách
+đường dẫn chính xác. Final training phải chạy lại report ở hai confidence sau
+khi hoàn tất.
 
 ## Hợp đồng Host → K230
 

@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from export_ua_detrac_yolo import export_ua_detrac
 from create_k230_deployment_contract import build_contract
+from run_yolo11n_final import FinalTrainingPreflightError, _preflight_final_training_inputs
 from validate_k230_evaluation_readiness import validate_sessions
 from validate_team_model_release import validate_release
 
@@ -186,3 +187,40 @@ def test_release_requires_a_hash_bound_k230_contract_and_board_log(tmp_path: Pat
     payload["detection"]["confidence"] = 0.25
     contract.write_text(json.dumps(payload), encoding="utf-8")
     assert "K230_DEPLOYMENT_CONTRACT_MISMATCH" in validate_release(manifest, kmodel, log, contract)["reason"]
+
+
+def test_final_training_preflight_accepts_external_dataset_and_common_ua_root(tmp_path: Path) -> None:
+    evidence = tmp_path / "UMT_EVIDENCE"
+    dataset = evidence / "dataset-v1-full"
+    (dataset / "images").mkdir(parents=True)
+    (dataset / "labels").mkdir()
+    metadata = dataset / "metadata"
+    metadata.mkdir()
+    (metadata / "export_summary.json").write_text("{}", encoding="utf-8")
+    train_xml = evidence / "DETRAC-Train-Annotations-XML"
+    test_xml = evidence / "DETRAC-Test-Annotations-XML"
+    train_xml.mkdir()
+    test_xml.mkdir()
+
+    roots = _preflight_final_training_inputs(dataset, [evidence])
+
+    assert roots == [train_xml, test_xml]
+
+
+def test_final_training_preflight_reports_each_missing_external_path(tmp_path: Path) -> None:
+    source = tmp_path / "dataset-v1-full"
+    evidence = tmp_path / "UMT_EVIDENCE"
+    evidence.mkdir()
+
+    try:
+        _preflight_final_training_inputs(source, [evidence])
+    except FinalTrainingPreflightError as error:
+        message = str(error)
+    else:
+        raise AssertionError("Preflight must stop when external inputs are missing")
+
+    assert "FINAL TRAINING BLOCKED" in message
+    assert str(source) in message
+    assert str(source / "metadata" / "export_summary.json") in message
+    assert str(evidence / "DETRAC-Train-Annotations-XML") in message
+    assert str(evidence / "DETRAC-Test-Annotations-XML") in message
