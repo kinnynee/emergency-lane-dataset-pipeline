@@ -16,6 +16,7 @@ optimizer: auto
 pretrained: true
 plots: false
 prediction_confidences: [0.0, 0.50]
+evaluation_split: cross_test
 source_dataset: ../dataset_output/dataset-v1-full
 ua_annotation_roots:
   - ../storage_placeholders/online_data/raw/ua_detrac_orig/DETRAC-Train-Annotations-XML

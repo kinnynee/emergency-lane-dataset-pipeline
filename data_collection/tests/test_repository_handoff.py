@@ -30,6 +30,8 @@ def test_required_handoff_files_are_present() -> None:
         REPO_ROOT / "data_collection" / "docs" / "27_training_export_and_k230_readiness.md",
         REPO_ROOT / "data_collection" / "scripts" / "export_ua_detrac_yolo.py",
         REPO_ROOT / "data_collection" / "scripts" / "validate_k230_evaluation_readiness.py",
+        REPO_ROOT / "data_collection" / "scripts" / "evaluate_yolo_slices.py",
+        REPO_ROOT / "data_collection" / "scripts" / "run_full_ua_detrac_replay.py",
         REPO_ROOT / "data_collection" / "scripts" / "checksum_dataset.py",
         REPORT_ROOT / "executive_summary.md",
         REPORT_ROOT / "quality_audit_summary.csv",

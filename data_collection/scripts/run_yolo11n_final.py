@@ -22,6 +22,7 @@ from run_yolo11n_smoke_v2 import (
     _resolve_config_path,
     _write_team_model_manifest,
 )
+from evaluate_yolo_slices import REQUIRED_CONFIDENCES, evaluate_separate_slices
 from validate_yolo_dataset import validate_dataset
 
 
@@ -45,7 +46,7 @@ def _load_final_config(path: Path) -> dict[str, Any]:
     required = {
         "model", "base_weights", "model_variant", "training_stage", "imgsz", "epochs", "patience",
         "batch", "seed", "deterministic", "workers", "optimizer", "pretrained", "plots",
-        "prediction_confidences", "source_dataset", "ua_annotation_roots", "model_provenance_policy",
+        "prediction_confidences", "evaluation_split", "source_dataset", "ua_annotation_roots", "model_provenance_policy",
     }
     missing = sorted(required - set(config))
     if missing:
@@ -58,8 +59,10 @@ def _load_final_config(path: Path) -> dict[str, Any]:
         raise ValueError("Missing FINETUNED_TEAM_MODEL_REQUIRED provenance policy")
     if (int(config["imgsz"]), int(config["epochs"]), int(config["patience"]), int(config["seed"])) != (320, 100, 20, 230):
         raise ValueError("Final training requires imgsz=320, epochs=100, patience=20, seed=230")
-    if tuple(float(value) for value in config["prediction_confidences"]) != (0.0, 0.50):
+    if tuple(float(value) for value in config["prediction_confidences"]) != REQUIRED_CONFIDENCES:
         raise ValueError("Final report must evaluate confidence 0.00 and 0.50")
+    if config["evaluation_split"] != "cross_test":
+        raise ValueError("Final release evaluation must use the locked cross_test split")
     return config
 
 
@@ -186,12 +189,21 @@ def main() -> int:
     if not checkpoint.is_file():
         raise FileNotFoundError(f"Expected final checkpoint was not written: {checkpoint}")
     _write_team_model_manifest(run_dir, config, checkpoint, base_weights, config_path, source)
+    evaluation_report = evaluate_separate_slices(
+        checkpoint,
+        source,
+        run_dir,
+        split=str(config["evaluation_split"]),
+        confidences=tuple(float(value) for value in config["prediction_confidences"]),
+        device=args.device,
+    )
     ended = datetime.now(timezone.utc)
     run_parameters: dict[str, Any] = {
         "started_at_utc": started.isoformat(), "finished_at_utc": ended.isoformat(),
         "wall_seconds": (ended - started).total_seconds(), "training_config": config,
         "source_dataset": str(source), "dataset_validation": validation,
         "report_confidences": [0.0, 0.50],
+        "separate_evaluation_report": str(evaluation_report),
     }
     (run_dir / "run_parameters.json").write_text(json.dumps(run_parameters, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(run_parameters, ensure_ascii=False, indent=2))

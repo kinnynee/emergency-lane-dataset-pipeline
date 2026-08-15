@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -14,6 +15,8 @@ sys.path.insert(0, str(SCRIPTS))
 
 from export_ua_detrac_yolo import export_ua_detrac
 from create_k230_deployment_contract import build_contract
+from evaluate_yolo_slices import build_slice_manifest
+from run_full_ua_detrac_replay import discover_xmls
 from run_yolo11n_final import FinalTrainingPreflightError, _preflight_final_training_inputs
 from validate_k230_evaluation_readiness import validate_sessions
 from validate_team_model_release import validate_release
@@ -224,3 +227,54 @@ def test_final_training_preflight_reports_each_missing_external_path(tmp_path: P
     assert str(source / "metadata" / "export_summary.json") in message
     assert str(evidence / "DETRAC-Train-Annotations-XML") in message
     assert str(evidence / "DETRAC-Test-Annotations-XML") in message
+
+
+def test_separate_evaluation_builds_isolated_aau_and_ua_input_manifests(tmp_path: Path) -> None:
+    source = tmp_path / "dataset"
+    images = source / "images" / "cross_test"
+    labels = source / "labels" / "cross_test"
+    images.mkdir(parents=True)
+    labels.mkdir(parents=True)
+    metadata = source / "metadata"
+    metadata.mkdir()
+    rows = [
+        {"dataset": "AAU RainSnow", "split": "cross_test", "exported_image": "images/cross_test/aau.jpg", "exported_label": "labels/cross_test/aau.txt"},
+        {"dataset": "UA-DETRAC Original", "split": "cross_test", "exported_image": "images/cross_test/ua.jpg", "exported_label": "labels/cross_test/ua.txt"},
+        {"dataset": "MIO-TCD Localization", "split": "cross_test", "exported_image": "images/cross_test/mio.jpg", "exported_label": "labels/cross_test/mio.txt"},
+    ]
+    with (metadata / "images.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    for name in ("aau", "ua", "mio"):
+        (images / f"{name}.jpg").write_bytes(b"image")
+        (labels / f"{name}.txt").write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+
+    image_list, data_yaml, image_count = build_slice_manifest(source, tmp_path / "evaluation", "AAU RainSnow", "cross_test")
+
+    assert image_count == 1
+    assert image_list.read_text(encoding="utf-8").splitlines() == [str((images / "aau.jpg").resolve())]
+    data = data_yaml.read_text(encoding="utf-8")
+    assert str(image_list) in data
+    assert "UA-DETRAC" not in data
+
+
+def test_replay_cli_help_is_runnable_from_an_arbitrary_working_directory(tmp_path: Path) -> None:
+    replay = SCRIPTS / "replay_ua_detrac_alerts.py"
+    result = subprocess.run([sys.executable, str(replay), "--help"], cwd=tmp_path, text=True, capture_output=True)
+
+    assert result.returncode == 0, result.stderr
+    assert "--ua-xml" in result.stdout
+
+
+def test_full_replay_discovers_every_unique_xml_file(tmp_path: Path) -> None:
+    first = tmp_path / "train"
+    second = tmp_path / "test" / "nested"
+    first.mkdir(parents=True)
+    second.mkdir(parents=True)
+    (first / "MVI_20011.xml").write_text("<sequence name='MVI_20011'/>", encoding="utf-8")
+    (second / "MVI_39031.xml").write_text("<sequence name='MVI_39031'/>", encoding="utf-8")
+
+    result = discover_xmls([first, second.parent])
+
+    assert [path.name for path in result] == ["MVI_20011.xml", "MVI_39031.xml"]
