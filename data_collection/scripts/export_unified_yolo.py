@@ -32,6 +32,7 @@ from PIL import Image
 
 from external_eda_common import ROOT, clip_bbox_to_image, load_yaml, read_csv, safe_sequence, validate_bbox
 from ignored_region import IgnoredRegion, mask_image_bytes, parse_ua_ignored_regions
+from yolo_export_qc import audit_yolo_dataset, write_report
 
 
 DEFAULT_MIO = ROOT / "storage_placeholders" / "online_data" / "raw" / "mio_tcd" / "MIO-TCD-Localization.tar"
@@ -275,9 +276,22 @@ class _AssetReader:
 
     def __enter__(self) -> "_AssetReader":
         if self.path.is_dir():
-            for item in self.path.rglob("*"):
-                if item.is_file():
-                    self._members[item.relative_to(self.path).as_posix()] = item.relative_to(self.path).as_posix()
+            # A UA source is often supplied as an evidence root that also
+            # contains prior exports.  Restrict discovery to UA's known
+            # top-level directories so a re-export never re-scans (or treats
+            # as source) hundreds of thousands of files from an old/new
+            # dataset release.
+            ua_roots = [
+                self.path / "DETRAC-Images",
+                self.path / "DETRAC-Train-Annotations-XML",
+                self.path / "DETRAC-Test-Annotations-XML",
+            ]
+            roots = [root for root in ua_roots if root.is_dir()] or [self.path]
+            for root in roots:
+                for item in root.rglob("*"):
+                    if item.is_file():
+                        relative = item.relative_to(self.path).as_posix()
+                        self._members[relative] = relative
         elif self.path.is_file() and self.path.suffix.lower() == ".zip":
             self._archive = zipfile.ZipFile(self.path)
             self._members = {item.filename.replace("\\", "/"): item.filename for item in self._archive.infolist() if not item.is_dir()}
@@ -429,6 +443,7 @@ class _DatasetWriter:
         ignored_region_list = list(ignored_regions or [])
         class_ignore_regions: list[IgnoredRegion] = []
         lines: list[str] = []
+        seen_yolo_lines: set[str] = set()
         clipped_count = 0
         rules = self.mapping.get(mapping_key, {})
         for annotation in annotations:
@@ -496,7 +511,14 @@ class _DatasetWriter:
                 self.dataset_counts[dataset]["rejected_annotations"] += 1
                 self._rejected_writer.writerow({**row, "action": "EXCLUDE_INVALID_AFTER_CLIP", "reason": "|".join(issues)})
                 continue
-            lines.append(_yolo_line(clipped, width, height))
+            yolo_line = _yolo_line(clipped, width, height)
+            if yolo_line in seen_yolo_lines:
+                self.counts["rejected_annotations"] += 1
+                self.dataset_counts[dataset]["rejected_annotations"] += 1
+                self._rejected_writer.writerow({**row, "action": "EXCLUDE_DUPLICATE_BBOX", "reason": "DUPLICATE_YOLO_BBOX_AFTER_NORMALIZATION"})
+                continue
+            seen_yolo_lines.add(yolo_line)
+            lines.append(yolo_line)
             if adjustments:
                 clipped_count += 1
                 self.counts["clipped_boxes"] += 1
@@ -562,23 +584,55 @@ class _DatasetWriter:
             writer.writeheader()
             for (dataset, sequence_id), split in sorted(self.sequence_splits.items()):
                 writer.writerow({"dataset": dataset, "sequence_id": sequence_id, "split": split, "split_source": str(split_source)})
+        # Data files are complete at this point.  Recount the materialized
+        # output before creating any derived metadata; exporter counters are
+        # never used as evidence of the final release contents.
+        recount = audit_yolo_dataset(self.output, require_summary=False)
+        actual_images = int(recount["image_count_actual"])
+        actual_boxes = int(recount["box_count_actual"])
+        if self.counts["exported_images"] != actual_images:
+            raise AssertionError(
+                f"Written image count differs from exporter state: writer={self.counts['exported_images']}, actual={actual_images}"
+            )
+        if self.counts["exported_boxes"] != actual_boxes:
+            raise AssertionError(
+                f"Written box count differs from exporter state: writer={self.counts['exported_boxes']}, actual={actual_boxes}"
+            )
+        counts = Counter(self.counts)
+        counts["input_images"] = actual_images
+        counts["exported_images"] = actual_images
+        counts["exported_boxes"] = actual_boxes
+        counts["rejected_annotations"] = self.counts["rejected_annotations"]
+        counts["ignored_annotations"] = self.counts["ignored_annotations"]
         dataset_counts = {name: dict(sorted(values.items())) for name, values in sorted(self.dataset_counts.items())}
+        for name, actual in recount["output_counts_by_dataset"].items():
+            dataset_counts.setdefault(name, {}).update(actual)
         summary = {
-            "format": "unified-yolo-v1", "target_class": "vehicle", "class_id": 0,
+            "format": "unified-yolo-v2", "target_class": "vehicle", "class_id": 0,
             "preserve_original_class": True, "sources": sources,
             "split_source": str(split_source.resolve()), "mapping_source": str(mapping_source.resolve()),
-            "counts": dict(sorted(self.counts.items())), "images_by_split": dict(sorted(self.images_by_split.items())),
-            "boxes_by_split": dict(sorted(self.boxes_by_split.items())), "counts_by_dataset": dataset_counts,
+            "summary_generated_from": "final_output_recount",
+            "counts": dict(sorted(counts.items())),
+            "images_by_split": {split: count for split, count in recount["images_by_split"].items() if count},
+            "boxes_by_split": {split: count for split, count in recount["boxes_by_split"].items() if count},
+            "counts_by_dataset": dataset_counts,
             "sequence_count": len(self.sequence_splits),
         }
         if selection_metadata:
             summary["selection"] = selection_metadata
-        (metadata / "export_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         # Ultralytics resolves `path` relative to the process working directory,
         # not reliably relative to this YAML file.  A resolved path makes each
         # exported release trainable without requiring callers to `cd` first.
         dataset_yaml = {"path": self.output.resolve().as_posix(), "train": "images/train", "val": "images/val", "test": "images/cross_test", "names": {0: "vehicle"}}
         (self.output / "data.yaml").write_text(yaml.safe_dump(dataset_yaml, sort_keys=False, allow_unicode=True), encoding="utf-8")
+        (metadata / "export_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        qc_report = audit_yolo_dataset(self.output, require_summary=True)
+        write_report(qc_report, metadata / "qc_report.json")
+        if qc_report["status"] != "PASS":
+            raise RuntimeError(f"Export QC failed: {qc_report['errors']}")
+        summary["validated_export"] = True
+        summary["qc_report"] = "metadata/qc_report.json"
+        (metadata / "export_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return summary
 
 

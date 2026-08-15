@@ -131,9 +131,30 @@ def main() -> int:
     run_dir = args.run_dir.resolve()
     if run_dir.exists():
         raise FileExistsError(f"Refusing to overwrite existing final run: {run_dir}")
+    qc_path = source / "metadata" / "qc_report.json"
+    if not qc_path.is_file():
+        raise RuntimeError(f"Final training is blocked: required QC report is missing: {qc_path}")
+    try:
+        qc_report = json.loads(qc_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Final training is blocked: invalid QC report {qc_path}: {exc}") from exc
+    if (
+        not isinstance(qc_report, dict)
+        or qc_report.get("status") != "PASS"
+        or qc_report.get("image_mismatch") != 0
+        or qc_report.get("box_mismatch") != 0
+    ):
+        raise RuntimeError("Final training is blocked: dataset QC report is not a zero-mismatch PASS")
+    summary_path = source / "metadata" / "export_summary.json"
+    try:
+        export_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Final training is blocked: invalid export summary {summary_path}: {exc}") from exc
+    if not isinstance(export_summary, dict) or export_summary.get("validated_export") is not True:
+        raise RuntimeError("Final training is blocked: VALIDATED_EXPORT is not TRUE")
     validation = validate_dataset(source)
     if validation["status"] != "PASS":
-        raise RuntimeError(f"Full export failed QC: {validation['errors']}")
+        raise RuntimeError(f"Final training is blocked: current dataset no longer passes QC: {validation['errors']}")
     print("QC: PASS")
     base_weights = _resolve_config_path(config_path, str(config["base_weights"]))
     if not base_weights.is_file():
