@@ -1,0 +1,1304 @@
+{
+  "schema_version": "t2-remediation-plan-v1",
+  "dataset": "D:\\UMT_EVIDENCE\\dataset-v1-full",
+  "generated_at_utc": "2026-08-16T15:41:30.279651+00:00",
+  "status": "READY_TO_APPLY",
+  "issues": [],
+  "active_images_by_split_from_metadata": {
+    "train": 211483,
+    "val": 26987,
+    "cross_test": 12503
+  },
+  "images_by_dataset_and_split": {
+    "AAU RainSnow": {
+      "train": 1898,
+      "val": 200,
+      "cross_test": 100
+    },
+    "MIO-TCD Localization": {
+      "train": 110000,
+      "val": 0,
+      "cross_test": 0
+    },
+    "ONLINE_DATA": {
+      "train": 179,
+      "val": 0,
+      "cross_test": 0
+    },
+    "ONLINE_DATA User Provided Video": {
+      "train": 179,
+      "val": 84,
+      "cross_test": 81
+    },
+    "UA-DETRAC Original": {
+      "train": 99227,
+      "val": 26703,
+      "cross_test": 12322
+    }
+  },
+  "upx": {
+    "label_source": "AUTO_YOLO11N_COCO_2026_08_09",
+    "human_review_evidence": "NOT_FOUND_IN_PROMOTION_METADATA",
+    "confidence_threshold": "NOT_RECORDED_IN_AVAILABLE_PSEUDO_ANNOTATION_METADATA",
+    "evaluation_assets": [
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000001.jpg",
+        "label": "labels/val/UPX_12654544_frame_000001.txt",
+        "image_id": "UPX_12654544_000001",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000002.jpg",
+        "label": "labels/val/UPX_12654544_frame_000002.txt",
+        "image_id": "UPX_12654544_000002",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000003.jpg",
+        "label": "labels/val/UPX_12654544_frame_000003.txt",
+        "image_id": "UPX_12654544_000003",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000004.jpg",
+        "label": "labels/val/UPX_12654544_frame_000004.txt",
+        "image_id": "UPX_12654544_000004",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000005.jpg",
+        "label": "labels/val/UPX_12654544_frame_000005.txt",
+        "image_id": "UPX_12654544_000005",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000006.jpg",
+        "label": "labels/val/UPX_12654544_frame_000006.txt",
+        "image_id": "UPX_12654544_000006",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000007.jpg",
+        "label": "labels/val/UPX_12654544_frame_000007.txt",
+        "image_id": "UPX_12654544_000007",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000008.jpg",
+        "label": "labels/val/UPX_12654544_frame_000008.txt",
+        "image_id": "UPX_12654544_000008",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000009.jpg",
+        "label": "labels/val/UPX_12654544_frame_000009.txt",
+        "image_id": "UPX_12654544_000009",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000010.jpg",
+        "label": "labels/val/UPX_12654544_frame_000010.txt",
+        "image_id": "UPX_12654544_000010",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000011.jpg",
+        "label": "labels/val/UPX_12654544_frame_000011.txt",
+        "image_id": "UPX_12654544_000011",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000012.jpg",
+        "label": "labels/val/UPX_12654544_frame_000012.txt",
+        "image_id": "UPX_12654544_000012",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000013.jpg",
+        "label": "labels/val/UPX_12654544_frame_000013.txt",
+        "image_id": "UPX_12654544_000013",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000014.jpg",
+        "label": "labels/val/UPX_12654544_frame_000014.txt",
+        "image_id": "UPX_12654544_000014",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000015.jpg",
+        "label": "labels/val/UPX_12654544_frame_000015.txt",
+        "image_id": "UPX_12654544_000015",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_12654544_frame_000016.jpg",
+        "label": "labels/val/UPX_12654544_frame_000016.txt",
+        "image_id": "UPX_12654544_000016",
+        "box_count": 0
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000001.jpg",
+        "label": "labels/val/UPX_15418503_frame_000001.txt",
+        "image_id": "UPX_15418503_000001",
+        "box_count": 5
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000002.jpg",
+        "label": "labels/val/UPX_15418503_frame_000002.txt",
+        "image_id": "UPX_15418503_000002",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000003.jpg",
+        "label": "labels/val/UPX_15418503_frame_000003.txt",
+        "image_id": "UPX_15418503_000003",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000004.jpg",
+        "label": "labels/val/UPX_15418503_frame_000004.txt",
+        "image_id": "UPX_15418503_000004",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000005.jpg",
+        "label": "labels/val/UPX_15418503_frame_000005.txt",
+        "image_id": "UPX_15418503_000005",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000006.jpg",
+        "label": "labels/val/UPX_15418503_frame_000006.txt",
+        "image_id": "UPX_15418503_000006",
+        "box_count": 7
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000007.jpg",
+        "label": "labels/val/UPX_15418503_frame_000007.txt",
+        "image_id": "UPX_15418503_000007",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000008.jpg",
+        "label": "labels/val/UPX_15418503_frame_000008.txt",
+        "image_id": "UPX_15418503_000008",
+        "box_count": 4
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000009.jpg",
+        "label": "labels/val/UPX_15418503_frame_000009.txt",
+        "image_id": "UPX_15418503_000009",
+        "box_count": 1
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000010.jpg",
+        "label": "labels/val/UPX_15418503_frame_000010.txt",
+        "image_id": "UPX_15418503_000010",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000011.jpg",
+        "label": "labels/val/UPX_15418503_frame_000011.txt",
+        "image_id": "UPX_15418503_000011",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000012.jpg",
+        "label": "labels/val/UPX_15418503_frame_000012.txt",
+        "image_id": "UPX_15418503_000012",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000013.jpg",
+        "label": "labels/val/UPX_15418503_frame_000013.txt",
+        "image_id": "UPX_15418503_000013",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000014.jpg",
+        "label": "labels/val/UPX_15418503_frame_000014.txt",
+        "image_id": "UPX_15418503_000014",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15418503_frame_000015.jpg",
+        "label": "labels/val/UPX_15418503_frame_000015.txt",
+        "image_id": "UPX_15418503_000015",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000001.jpg",
+        "label": "labels/val/UPX_15477129_frame_000001.txt",
+        "image_id": "UPX_15477129_000001",
+        "box_count": 16
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000002.jpg",
+        "label": "labels/val/UPX_15477129_frame_000002.txt",
+        "image_id": "UPX_15477129_000002",
+        "box_count": 8
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000003.jpg",
+        "label": "labels/val/UPX_15477129_frame_000003.txt",
+        "image_id": "UPX_15477129_000003",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000004.jpg",
+        "label": "labels/val/UPX_15477129_frame_000004.txt",
+        "image_id": "UPX_15477129_000004",
+        "box_count": 14
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000005.jpg",
+        "label": "labels/val/UPX_15477129_frame_000005.txt",
+        "image_id": "UPX_15477129_000005",
+        "box_count": 13
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000006.jpg",
+        "label": "labels/val/UPX_15477129_frame_000006.txt",
+        "image_id": "UPX_15477129_000006",
+        "box_count": 11
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000007.jpg",
+        "label": "labels/val/UPX_15477129_frame_000007.txt",
+        "image_id": "UPX_15477129_000007",
+        "box_count": 11
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000008.jpg",
+        "label": "labels/val/UPX_15477129_frame_000008.txt",
+        "image_id": "UPX_15477129_000008",
+        "box_count": 13
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000009.jpg",
+        "label": "labels/val/UPX_15477129_frame_000009.txt",
+        "image_id": "UPX_15477129_000009",
+        "box_count": 11
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000010.jpg",
+        "label": "labels/val/UPX_15477129_frame_000010.txt",
+        "image_id": "UPX_15477129_000010",
+        "box_count": 11
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000011.jpg",
+        "label": "labels/val/UPX_15477129_frame_000011.txt",
+        "image_id": "UPX_15477129_000011",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000012.jpg",
+        "label": "labels/val/UPX_15477129_frame_000012.txt",
+        "image_id": "UPX_15477129_000012",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000013.jpg",
+        "label": "labels/val/UPX_15477129_frame_000013.txt",
+        "image_id": "UPX_15477129_000013",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000014.jpg",
+        "label": "labels/val/UPX_15477129_frame_000014.txt",
+        "image_id": "UPX_15477129_000014",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000015.jpg",
+        "label": "labels/val/UPX_15477129_frame_000015.txt",
+        "image_id": "UPX_15477129_000015",
+        "box_count": 8
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000016.jpg",
+        "label": "labels/val/UPX_15477129_frame_000016.txt",
+        "image_id": "UPX_15477129_000016",
+        "box_count": 7
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000017.jpg",
+        "label": "labels/val/UPX_15477129_frame_000017.txt",
+        "image_id": "UPX_15477129_000017",
+        "box_count": 7
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000018.jpg",
+        "label": "labels/val/UPX_15477129_frame_000018.txt",
+        "image_id": "UPX_15477129_000018",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000019.jpg",
+        "label": "labels/val/UPX_15477129_frame_000019.txt",
+        "image_id": "UPX_15477129_000019",
+        "box_count": 6
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000020.jpg",
+        "label": "labels/val/UPX_15477129_frame_000020.txt",
+        "image_id": "UPX_15477129_000020",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000021.jpg",
+        "label": "labels/val/UPX_15477129_frame_000021.txt",
+        "image_id": "UPX_15477129_000021",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000022.jpg",
+        "label": "labels/val/UPX_15477129_frame_000022.txt",
+        "image_id": "UPX_15477129_000022",
+        "box_count": 8
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000023.jpg",
+        "label": "labels/val/UPX_15477129_frame_000023.txt",
+        "image_id": "UPX_15477129_000023",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000024.jpg",
+        "label": "labels/val/UPX_15477129_frame_000024.txt",
+        "image_id": "UPX_15477129_000024",
+        "box_count": 12
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000025.jpg",
+        "label": "labels/val/UPX_15477129_frame_000025.txt",
+        "image_id": "UPX_15477129_000025",
+        "box_count": 12
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000026.jpg",
+        "label": "labels/val/UPX_15477129_frame_000026.txt",
+        "image_id": "UPX_15477129_000026",
+        "box_count": 8
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000027.jpg",
+        "label": "labels/val/UPX_15477129_frame_000027.txt",
+        "image_id": "UPX_15477129_000027",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000028.jpg",
+        "label": "labels/val/UPX_15477129_frame_000028.txt",
+        "image_id": "UPX_15477129_000028",
+        "box_count": 8
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000029.jpg",
+        "label": "labels/val/UPX_15477129_frame_000029.txt",
+        "image_id": "UPX_15477129_000029",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000030.jpg",
+        "label": "labels/val/UPX_15477129_frame_000030.txt",
+        "image_id": "UPX_15477129_000030",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000031.jpg",
+        "label": "labels/val/UPX_15477129_frame_000031.txt",
+        "image_id": "UPX_15477129_000031",
+        "box_count": 2
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000032.jpg",
+        "label": "labels/val/UPX_15477129_frame_000032.txt",
+        "image_id": "UPX_15477129_000032",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000033.jpg",
+        "label": "labels/val/UPX_15477129_frame_000033.txt",
+        "image_id": "UPX_15477129_000033",
+        "box_count": 15
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000034.jpg",
+        "label": "labels/val/UPX_15477129_frame_000034.txt",
+        "image_id": "UPX_15477129_000034",
+        "box_count": 9
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000035.jpg",
+        "label": "labels/val/UPX_15477129_frame_000035.txt",
+        "image_id": "UPX_15477129_000035",
+        "box_count": 13
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000036.jpg",
+        "label": "labels/val/UPX_15477129_frame_000036.txt",
+        "image_id": "UPX_15477129_000036",
+        "box_count": 20
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000037.jpg",
+        "label": "labels/val/UPX_15477129_frame_000037.txt",
+        "image_id": "UPX_15477129_000037",
+        "box_count": 19
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000038.jpg",
+        "label": "labels/val/UPX_15477129_frame_000038.txt",
+        "image_id": "UPX_15477129_000038",
+        "box_count": 15
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000039.jpg",
+        "label": "labels/val/UPX_15477129_frame_000039.txt",
+        "image_id": "UPX_15477129_000039",
+        "box_count": 18
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000040.jpg",
+        "label": "labels/val/UPX_15477129_frame_000040.txt",
+        "image_id": "UPX_15477129_000040",
+        "box_count": 17
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15477129_frame_000041.jpg",
+        "label": "labels/val/UPX_15477129_frame_000041.txt",
+        "image_id": "UPX_15477129_000041",
+        "box_count": 11
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000001.jpg",
+        "label": "labels/val/UPX_15571746_frame_000001.txt",
+        "image_id": "UPX_15571746_000001",
+        "box_count": 15
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000002.jpg",
+        "label": "labels/val/UPX_15571746_frame_000002.txt",
+        "image_id": "UPX_15571746_000002",
+        "box_count": 12
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000003.jpg",
+        "label": "labels/val/UPX_15571746_frame_000003.txt",
+        "image_id": "UPX_15571746_000003",
+        "box_count": 10
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000004.jpg",
+        "label": "labels/val/UPX_15571746_frame_000004.txt",
+        "image_id": "UPX_15571746_000004",
+        "box_count": 1
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000005.jpg",
+        "label": "labels/val/UPX_15571746_frame_000005.txt",
+        "image_id": "UPX_15571746_000005",
+        "box_count": 1
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000006.jpg",
+        "label": "labels/val/UPX_15571746_frame_000006.txt",
+        "image_id": "UPX_15571746_000006",
+        "box_count": 1
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000007.jpg",
+        "label": "labels/val/UPX_15571746_frame_000007.txt",
+        "image_id": "UPX_15571746_000007",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000008.jpg",
+        "label": "labels/val/UPX_15571746_frame_000008.txt",
+        "image_id": "UPX_15571746_000008",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000009.jpg",
+        "label": "labels/val/UPX_15571746_frame_000009.txt",
+        "image_id": "UPX_15571746_000009",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000010.jpg",
+        "label": "labels/val/UPX_15571746_frame_000010.txt",
+        "image_id": "UPX_15571746_000010",
+        "box_count": 4
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000011.jpg",
+        "label": "labels/val/UPX_15571746_frame_000011.txt",
+        "image_id": "UPX_15571746_000011",
+        "box_count": 3
+      },
+      {
+        "split": "val",
+        "image": "images/val/UPX_15571746_frame_000012.jpg",
+        "label": "labels/val/UPX_15571746_frame_000012.txt",
+        "image_id": "UPX_15571746_000012",
+        "box_count": 10
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000001.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000001.txt",
+        "image_id": "UPX_140224_000001",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000002.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000002.txt",
+        "image_id": "UPX_140224_000002",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000003.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000003.txt",
+        "image_id": "UPX_140224_000003",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000004.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000004.txt",
+        "image_id": "UPX_140224_000004",
+        "box_count": 4
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000005.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000005.txt",
+        "image_id": "UPX_140224_000005",
+        "box_count": 5
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000006.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000006.txt",
+        "image_id": "UPX_140224_000006",
+        "box_count": 10
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000007.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000007.txt",
+        "image_id": "UPX_140224_000007",
+        "box_count": 4
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000008.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000008.txt",
+        "image_id": "UPX_140224_000008",
+        "box_count": 5
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000009.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000009.txt",
+        "image_id": "UPX_140224_000009",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000010.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000010.txt",
+        "image_id": "UPX_140224_000010",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000011.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000011.txt",
+        "image_id": "UPX_140224_000011",
+        "box_count": 7
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000012.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000012.txt",
+        "image_id": "UPX_140224_000012",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000013.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000013.txt",
+        "image_id": "UPX_140224_000013",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000014.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000014.txt",
+        "image_id": "UPX_140224_000014",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000015.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000015.txt",
+        "image_id": "UPX_140224_000015",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000016.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000016.txt",
+        "image_id": "UPX_140224_000016",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000017.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000017.txt",
+        "image_id": "UPX_140224_000017",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000018.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000018.txt",
+        "image_id": "UPX_140224_000018",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000019.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000019.txt",
+        "image_id": "UPX_140224_000019",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000020.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000020.txt",
+        "image_id": "UPX_140224_000020",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000021.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000021.txt",
+        "image_id": "UPX_140224_000021",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000022.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000022.txt",
+        "image_id": "UPX_140224_000022",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000023.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000023.txt",
+        "image_id": "UPX_140224_000023",
+        "box_count": 8
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000024.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000024.txt",
+        "image_id": "UPX_140224_000024",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000025.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000025.txt",
+        "image_id": "UPX_140224_000025",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000026.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000026.txt",
+        "image_id": "UPX_140224_000026",
+        "box_count": 5
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000027.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000027.txt",
+        "image_id": "UPX_140224_000027",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000028.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000028.txt",
+        "image_id": "UPX_140224_000028",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000029.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000029.txt",
+        "image_id": "UPX_140224_000029",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000030.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000030.txt",
+        "image_id": "UPX_140224_000030",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000031.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000031.txt",
+        "image_id": "UPX_140224_000031",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000032.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000032.txt",
+        "image_id": "UPX_140224_000032",
+        "box_count": 5
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000033.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000033.txt",
+        "image_id": "UPX_140224_000033",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000034.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000034.txt",
+        "image_id": "UPX_140224_000034",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000035.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000035.txt",
+        "image_id": "UPX_140224_000035",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000036.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000036.txt",
+        "image_id": "UPX_140224_000036",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000037.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000037.txt",
+        "image_id": "UPX_140224_000037",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000038.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000038.txt",
+        "image_id": "UPX_140224_000038",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000039.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000039.txt",
+        "image_id": "UPX_140224_000039",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000040.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000040.txt",
+        "image_id": "UPX_140224_000040",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000041.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000041.txt",
+        "image_id": "UPX_140224_000041",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000042.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000042.txt",
+        "image_id": "UPX_140224_000042",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000043.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000043.txt",
+        "image_id": "UPX_140224_000043",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000044.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000044.txt",
+        "image_id": "UPX_140224_000044",
+        "box_count": 1
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000045.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000045.txt",
+        "image_id": "UPX_140224_000045",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000046.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000046.txt",
+        "image_id": "UPX_140224_000046",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000047.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000047.txt",
+        "image_id": "UPX_140224_000047",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000048.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000048.txt",
+        "image_id": "UPX_140224_000048",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000049.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000049.txt",
+        "image_id": "UPX_140224_000049",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000050.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000050.txt",
+        "image_id": "UPX_140224_000050",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000051.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000051.txt",
+        "image_id": "UPX_140224_000051",
+        "box_count": 4
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000052.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000052.txt",
+        "image_id": "UPX_140224_000052",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000053.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000053.txt",
+        "image_id": "UPX_140224_000053",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000054.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000054.txt",
+        "image_id": "UPX_140224_000054",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000055.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000055.txt",
+        "image_id": "UPX_140224_000055",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000056.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000056.txt",
+        "image_id": "UPX_140224_000056",
+        "box_count": 3
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_140224_frame_000057.jpg",
+        "label": "labels/cross_test/UPX_140224_frame_000057.txt",
+        "image_id": "UPX_140224_000057",
+        "box_count": 2
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000001.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000001.txt",
+        "image_id": "UPX_MIXKIT_3418_000001",
+        "box_count": 11
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000002.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000002.txt",
+        "image_id": "UPX_MIXKIT_3418_000002",
+        "box_count": 8
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000003.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000003.txt",
+        "image_id": "UPX_MIXKIT_3418_000003",
+        "box_count": 13
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000004.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000004.txt",
+        "image_id": "UPX_MIXKIT_3418_000004",
+        "box_count": 18
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000005.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000005.txt",
+        "image_id": "UPX_MIXKIT_3418_000005",
+        "box_count": 22
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000006.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000006.txt",
+        "image_id": "UPX_MIXKIT_3418_000006",
+        "box_count": 16
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000007.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000007.txt",
+        "image_id": "UPX_MIXKIT_3418_000007",
+        "box_count": 15
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000008.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000008.txt",
+        "image_id": "UPX_MIXKIT_3418_000008",
+        "box_count": 16
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000009.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000009.txt",
+        "image_id": "UPX_MIXKIT_3418_000009",
+        "box_count": 16
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000010.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000010.txt",
+        "image_id": "UPX_MIXKIT_3418_000010",
+        "box_count": 10
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000011.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000011.txt",
+        "image_id": "UPX_MIXKIT_3418_000011",
+        "box_count": 9
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000012.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000012.txt",
+        "image_id": "UPX_MIXKIT_3418_000012",
+        "box_count": 7
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000013.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000013.txt",
+        "image_id": "UPX_MIXKIT_3418_000013",
+        "box_count": 7
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000014.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000014.txt",
+        "image_id": "UPX_MIXKIT_3418_000014",
+        "box_count": 9
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_3418_frame_000015.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_3418_frame_000015.txt",
+        "image_id": "UPX_MIXKIT_3418_000015",
+        "box_count": 8
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000001.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000001.txt",
+        "image_id": "UPX_MIXKIT_40635_000001",
+        "box_count": 12
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000002.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000002.txt",
+        "image_id": "UPX_MIXKIT_40635_000002",
+        "box_count": 9
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000003.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000003.txt",
+        "image_id": "UPX_MIXKIT_40635_000003",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000004.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000004.txt",
+        "image_id": "UPX_MIXKIT_40635_000004",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000005.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000005.txt",
+        "image_id": "UPX_MIXKIT_40635_000005",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000006.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000006.txt",
+        "image_id": "UPX_MIXKIT_40635_000006",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000007.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000007.txt",
+        "image_id": "UPX_MIXKIT_40635_000007",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000008.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000008.txt",
+        "image_id": "UPX_MIXKIT_40635_000008",
+        "box_count": 0
+      },
+      {
+        "split": "cross_test",
+        "image": "images/cross_test/UPX_MIXKIT_40635_frame_000009.jpg",
+        "label": "labels/cross_test/UPX_MIXKIT_40635_frame_000009.txt",
+        "image_id": "UPX_MIXKIT_40635_000009",
+        "box_count": 0
+      }
+    ],
+    "evaluation_images_by_split": {
+      "val": 84,
+      "cross_test": 81
+    },
+    "evaluation_box_count": 881,
+    "distribution_by_road_type_and_lighting": {
+      "cross_test / HIGHWAY / TWILIGHT": 15,
+      "cross_test / INTERSECTION / DAY": 57,
+      "cross_test / URBAN_ROAD / TWILIGHT": 9,
+      "train / HIGHWAY / DAY": 24,
+      "train / HIGHWAY / TWILIGHT": 36,
+      "train / URBAN_ROAD / TWILIGHT": 119,
+      "val / HIGHWAY / NIGHT": 16,
+      "val / URBAN_ROAD / DAY": 41,
+      "val / URBAN_ROAD / TWILIGHT": 27
+    },
+    "image_id_filename_mismatches": 344
+  },
+  "online_hw": {
+    "orphan_images": [
+      "images/train/ONLINE_HW_DAY_01_f0001.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0002.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0003.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0004.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0005.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0006.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0007.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0008.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0009.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0010.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0011.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0012.jpg",
+      "images/train/ONLINE_HW_DAY_01_f0013.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0001.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0002.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0003.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0004.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0005.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0006.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0007.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0008.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0009.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0010.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0011.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0012.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0013.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0014.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0015.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0016.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0017.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0018.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0019.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0020.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0021.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0022.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0023.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0024.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0025.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0026.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0027.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0028.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0029.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0030.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0031.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0032.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0033.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0034.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0035.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0036.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0037.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0038.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0039.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0040.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0041.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0042.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0043.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0044.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0045.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0046.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0047.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0048.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0049.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0050.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0051.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0052.jpg",
+      "images/train/ONLINE_HW_DAY_02_f0053.jpg"
+    ],
+    "orphan_image_count": 66,
+    "orphan_box_count": 0,
+    "orphan_images_by_sequence": {
+      "ONLINE_HW_DAY_01": 13,
+      "ONLINE_HW_DAY_02": 53
+    },
+    "image_id_filename_mismatches": 179,
+    "visual_review_status": "REQUIRED_FOR_BACKFILL; DO_NOT_INFER_LICENSE_OR_HUMAN_LABEL_REVIEW"
+  },
+  "validation_coverage": {
+    "mio_tcd_val_images": 0,
+    "note": "MIO-TCD is train-only in this release; validation is not representative of all training sources."
+  },
+  "join_key_policy": {
+    "required_key": "exported_image",
+    "reason": "image_id does not reliably equal the image filename for ONLINE_* and UPX_* records."
+  }
+}
