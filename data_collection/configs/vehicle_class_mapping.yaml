@@ -1,5 +1,5 @@
-mapping_version: "3.0"
-review_status: "CAR_ONLY_POLICY_PENDING_REEXPORT_2026_08_13"
+mapping_version: "3.1"
+review_status: "CAR_ONLY_POLICY_PENDING_REEXPORT_T2_PSEUDOLABEL_QUARANTINE_2026_08_16"
 target_class: vehicle
 preserve_original_class: true
 policy: "Retain approved four-wheel motor vehicles as the one positive detector class. Motorcycle, motorbike and bicycle annotations are never positive labels; valid boxes are retained as IGNORE_REGION and black-masked only in derived training images so they are not silently learned as background."
@@ -40,3 +40,17 @@ ua_detrac:
     track_exclusions:
       - {sequence_id: MVI_40172, track_id: "79", action: EXCLUDE_NON_VEHICLE_TRACK, bbox_count: 201}
   van: {mapped_class: vehicle, include: true, review_required: false}
+
+# ``COCO_motor_vehicle`` is an aggregate emitted by the legacy online
+# pseudo-label workflow.  It does not preserve COCO's car/motorcycle/bus/truck
+# distinction, so it cannot satisfy the car-only policy.  Keep such labels out
+# of every evaluation split and require a class-preserving re-export or human
+# review before deciding whether any box may become a positive vehicle label.
+online_auto_label:
+  COCO_motor_vehicle:
+    mapped_class: null
+    include: false
+    handling: QUARANTINE_PENDING_CLASS_PRESERVING_REEXPORT
+    evaluation_eligible: false
+    review_required: true
+    review_note: "Aggregate may include motorcycle; never map directly to vehicle class 0."
