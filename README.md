@@ -21,6 +21,8 @@ EDA currently covers 12,198 sampled images and an **analysis-scope sum** of 1,30
 
 All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is still pending collection and must remain locked from training after it is created.
 
+The 2026-10-10 research audit reconciles the local `dataset-v1-full-reexport` at 250,450 images and independently recomputes operating-point metrics from user-supplied YOLOv8n cross-test detections on 12,522 images. It records the remaining leakage and model-provenance gaps. These offline results do not establish K230 board performance or release readiness; see the [cross-test audit](data_collection/reports/cross_test_raw_20261010/README.md).
+
 ## Repository map
 
 - [`data_collection/README.md`](data_collection/README.md): detailed workflow and directory guide.
@@ -32,6 +34,11 @@ All dataset selections and splits are `PROPOSAL_ONLY`. The final K230 holdout is
 - [`data_collection/docs/28_unified_export_and_condition_frames.md`](data_collection/docs/28_unified_export_and_condition_frames.md): unified MIO/AAU/UA YOLO export, QC, condition-frame extraction, and YOLO11n-320 baseline commands.
 - [`data_collection/docs/28_car_only_k230_release_policy.md`](data_collection/docs/28_car_only_k230_release_policy.md): fine-tuned-model release gate and Host→K230 contract.
 - [`data_collection/reports/model_and_replay_release_status.md`](data_collection/reports/model_and_replay_release_status.md): current blocked/verified release evidence; no stale replay metrics.
+- [`data_collection/reports/dataset_audit.md`](data_collection/reports/dataset_audit.md): exported image counts by source and split.
+- [`data_collection/reports/leakage_report.md`](data_collection/reports/leakage_report.md): checked split IDs and outstanding leakage risks.
+- [`data_collection/reports/evaluation_summary.md`](data_collection/reports/evaluation_summary.md): offline YOLOv8n results and evidence levels.
+- [`data_collection/reports/missing_evidence.md`](data_collection/reports/missing_evidence.md): evidence still needed for research claims.
+- [`data_collection/reports/data_collection_checklist.md`](data_collection/reports/data_collection_checklist.md): K230 field collection checklist.
 - [`k230/README.md`](k230/README.md): fail-closed CanMV integration and required board log markers.
 - [`data_collection/reports/external_eda/executive_summary.md`](data_collection/reports/external_eda/executive_summary.md): main EDA handoff summary.
 - [`data_collection/reports/external_eda/quality_audit_summary.csv`](data_collection/reports/external_eda/quality_audit_summary.csv): dataset-level quality gates.

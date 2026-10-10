@@ -1,0 +1,53 @@
+{
+  "dataset_version": "dataset-v1-full-reexport",
+  "source_files_external": {
+    "images.csv": "b7b2be5f71c849f2aa1810c019bbef6865b63aabc85e2f7a18c9a65cb7a84030",
+    "export_summary.json": "50f6a9a5c17ba62c7797bc4f65b15b71b13011f4733b035b42cce64df31e5da4",
+    "qc_report.json": "a745a9f6127cd391c7994aa628ad1aca883dde6a0bdeeca37e23d0332cfc00e3"
+  },
+  "images_by_source_and_split": [
+    {
+      "dataset": "AAU RainSnow",
+      "split": "cross_test",
+      "images": 200
+    },
+    {
+      "dataset": "AAU RainSnow",
+      "split": "train",
+      "images": 1798
+    },
+    {
+      "dataset": "AAU RainSnow",
+      "split": "val",
+      "images": 200
+    },
+    {
+      "dataset": "MIO-TCD Localization",
+      "split": "train",
+      "images": 110000
+    },
+    {
+      "dataset": "UA-DETRAC Original",
+      "split": "cross_test",
+      "images": 12322
+    },
+    {
+      "dataset": "UA-DETRAC Original",
+      "split": "train",
+      "images": 99227
+    },
+    {
+      "dataset": "UA-DETRAC Original",
+      "split": "val",
+      "images": 26703
+    }
+  ],
+  "images_by_split": {
+    "train": 211025,
+    "val": 26903,
+    "cross_test": 12522
+  },
+  "exported_images": 250450,
+  "qc_status": "PASS",
+  "qc_image_mismatch": 0
+}

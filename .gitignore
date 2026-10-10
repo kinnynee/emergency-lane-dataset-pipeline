@@ -11,6 +11,9 @@ data_collection/configs/yolo11n_320_smoke_5ep.yaml
 tmp/
 tools/
 *.pt
+data_collection/reports/cross_test_raw_20261010/*.pkl
+data_collection/reports/cross_test_raw_20261010/*.zip
+data_collection/reports/cross_test_raw_20261010/cross_test_images_manifest.csv
 pip_replay_install.*.log
 .env
 cookies.txt

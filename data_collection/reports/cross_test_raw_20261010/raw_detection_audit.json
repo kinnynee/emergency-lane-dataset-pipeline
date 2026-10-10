@@ -1,0 +1,31 @@
+{
+  "source_zip": "EXTERNAL_USER_SUPPLIED/PHAT_HIEN_THO_CROSS_TEST_20261010.zip",
+  "export_images": "EXTERNAL_DATASET/dataset-v1-full-reexport/metadata/images.csv",
+  "ua_ignore_csv": "data_collection/reports/cross_test_raw_20261010/ua_ignore_regions.csv",
+  "ua_ignore_regions": 29,
+  "files": {
+    "detections_ba_model.pkl": {
+      "sha256": "0822f98bdb44a235900a4fa7602e07c23a9b86712395890207b311c3be234a6a",
+      "rows": 12522,
+      "unique_stems": 12522
+    },
+    "detections.pkl": {
+      "sha256": "04603f35b036aaa4b81f0d1ae68f059fb86ce56478645d561f486ac42221028b",
+      "rows": 12522,
+      "unique_stems": 12522
+    }
+  },
+  "sequence_images": {
+    "Hjorringvej-4": 100,
+    "MVI_39311": 1505,
+    "MVI_39401": 1385,
+    "MVI_39781": 1861,
+    "MVI_39851": 1286,
+    "MVI_40191": 2495,
+    "MVI_40751": 1145,
+    "MVI_40851": 1140,
+    "MVI_41063": 1505,
+    "Ringvej-3": 100
+  },
+  "method": "Independent greedy IoU>=0.5; score>0.5; top 20; H1/H3 guard maps 320x320 to 640x480 and requires both sides>=25px. Local ign/bo IoU>0.3 always removed from FP. UA source rectangles IoA>=0.5 removed only for exploratory after-UA-regions precision. Original evaluator script unavailable."
+}

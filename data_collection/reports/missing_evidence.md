@@ -1,0 +1,20 @@
+# Bằng chứng còn thiếu cho bản nghiên cứu
+
+Ngày rà soát: 10/10/2026. `MISSING` nghĩa là chưa thấy bằng chứng đủ trong workspace hoặc chưa thể đối chiếu đến đúng thí nghiệm; không mặc định kết quả bằng 0. Các tài liệu dán vào LDKC-12/23: [dataset audit](dataset_audit.md), [leakage report](leakage_report.md), [evaluation summary](evaluation_summary.md). LDKC-14: [checklist](data_collection_checklist.md).
+
+| Ưu tiên | Mục cần bổ sung thủ công | File/bằng chứng cần có | Lý do |
+|---|---|---|---|
+| 1 | Kết quả gốc ngày 07/10/2026 | `BANG_SO_LIEU_BAI_BAO.md`, JSON từng run/sequence, script chấm gốc, checkpoint/ONNX đầy đủ và manifest train/test | [Pickle dự đoán 10/10](cross_test_raw_20261010/cross_test_raw_detection_audit.md) đã cho phép tính lại recall, TP/FN/FP và precision ở ngưỡng vận hành; mAP, nguồn gốc checkpoint và toàn bộ luật chấm gốc chưa xác nhận. |
+| 1 | 10 ảnh test cũ trùng train | Danh sách 10 path, SHA-256, split/version, run đã dùng | Hiện chỉ có mô tả trong yêu cầu; cần loại khỏi đánh giá độc lập sau xác minh. |
+| 1 | 58/81 video replay thuộc train | Manifest 81 video, 58 cặp trùng, train manifest checkpoint, kết quả replay tương ứng | Xác định run nào bị nhiễm và vô hiệu hóa kết luận held-out. |
+| 1 | Near duplicate/cùng video/camera giữa split | Full hash/pHash audit kèm cặp file, camera/location/session ID, reviewer | [Audit cũ](audit/FULL_EDA_AUDIT_REPORT.md) chỉ chứng minh một phần; export reexport mới kiểm ID/đường dẫn. |
+| 1 | Số ảnh raw trước export theo nguồn | Inventory ảnh của từng archive với version, checksum và quy tắc lọc | [Dataset audit](dataset_audit.md) chỉ xác nhận số ảnh được export; không đồng nhất số export với số raw. |
+| 1 | Provenance model V8 | Checkpoint YOLOv8n, hai checkpoint 500 ảnh, train config, manifest 500 ảnh, ONNX, kmodel, compile/profiler log, SHA-256 đầy đủ | Pickle có box/score và README ghi hash ONNX rút gọn, nhưng chưa xác minh cùng tập train, số tham số, GFLOPs, kích thước kmodel và run config. `yolov8n.pt` generic trong repo không phải checkpoint V8. |
+| 1 | Review FP và luật ignore chính thức | 48 FP được xem, quyết định từng ảnh, script chấm gốc và 29 vùng UA được duyệt | [CSV tính lại](cross_test_raw_20261010/raw_detection_recall.csv) có TP/FP/FN theo sequence; 43/48 vẫn chỉ là tường thuật của [V8](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md). Precision sau áp dụng vùng UA cần review trước khi công bố. |
+| 2 | Ba claim V5: −1,84 điểm/300 ảnh, không giảm trên 12.522 ảnh, đêm −6,9 điểm sau chuẩn hóa | Run V5/full cùng split, bảng per-size/day/night, phép tính và định nghĩa chuẩn hóa | Không thấy trong JSON/log hiện có; không đưa vào kết luận như đã xác nhận. |
+| 2 | Runtime firmware V8 | Build/commit firmware, config NMS/threshold/max_boxes/guard, log khi chạy | Loader của repo yêu cầu NMS 0,5 nhưng không chứng minh giá trị thực trên board; NMS default 0,2 trong yêu cầu chưa kiểm. |
+| 2 | Nhãn sáng và camera UA/MIO | Camera/location map và review từng frame cần thiết; nhãn MIO theo ảnh | Metadata MIO chỉ gán DAY cho cả nhóm, không xác minh từng ảnh; UA chưa chứng minh unseen camera. |
+| 2 | Dữ liệu K230 thực địa | Video gốc, ROI JSON đã duyệt, manifest timestamp/FPS/camera, sự kiện/bbox, log board và permission | [LDKC-14](../field_collection/LDKC-14/README.md) mới có form; chưa chứng minh 60 sự kiện/5 giờ negative hoặc FPS real-time. |
+| 2 | USB-C và ghi video K230 | Board SKU, tài liệu cấp nguồn, video thử, log FPS/dropped frames | Chưa xác minh nguồn và khả năng ghi hình thực tế. |
+
+**Không nên đưa vào bảng chính trước khi có nguồn gốc:** số kích thước/tham số/GFLOPs V8; ba claim V5; metric replay 81 video; FPS board. Precision squash/letterbox 86,23%/90,68% **đã được tính lại từ pickle** theo luật ngưỡng vận hành và không áp dụng 29 vùng UA gốc; vẫn cần script chấm chính thức trước khi dùng như chỉ số công bố. Số ảnh/split của `dataset-v1-full-reexport` đã đối chiếu với `<DATA_ROOT>\dataset-v1-full-reexport\metadata\images.csv`, `export_summary.json` và `qc_report.json`; trạng thái xác minh metric riêng được ghi trong [evaluation summary](evaluation_summary.md).
