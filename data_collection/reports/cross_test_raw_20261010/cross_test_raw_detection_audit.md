@@ -43,6 +43,6 @@ Precision trên tính từ `TP / (TP + FP sau ignore UA)`. Hai file dự đoán 
 ## Giới hạn còn lại
 
 - Đây là **suy luận ONNX offline đã lưu**, không có kết quả kmodel hoặc số đo board/FPS. README chỉ ghi hash ONNX rút gọn; thiếu artifact và train/run manifest để kiểm chứng nguồn gốc model.
-- mAP@50 không thể tái tạo đầy đủ từ phép tính ngưỡng vận hành này; cần script evaluator/định nghĩa AP gốc. Nhận định 43/48 FP là xe thật cũng cần 48 ảnh và biên bản review.
+- mAP@50 không suy ra được từ **CSV ngưỡng vận hành**; [script AP riêng](../../scripts/audit_cross_test_map50.py) dùng toàn bộ box/score confidence ≥ 0,01 trong pickle để tạo [bảng theo sequence sau ignore UA](map50_after_ua_regions.csv), khớp các mốc bản 09/10. Script evaluator gốc vẫn chưa có để so mã; nhận định 43/48 FP là xe thật cũng cần 48 ảnh và biên bản review.
 - [JSON McNemar gốc](../references/SO_LIEU_09_10_2026.md) có các cặp bất đồng từng nhãn và p theo cụm 100 khung; báo cáo này đọc số từ JSON, chưa chạy lại phép kiểm định. Với full/H3/12.522 ảnh, chênh kmodel − ONNX +0,11 điểm, p = 0,0568: không phát hiện giảm recall trong phép đo này, cũng chưa chứng minh tương đương.
 - ZIP không chứa 300 ảnh V5 cho phép tự chạy lại phép so lượng tử hoá, 81 video replay hoặc danh sách 10 ảnh test cũ. Claim V5 −1,84 điểm, p < 0,001 đã có JSON gốc riêng; các claim khác vẫn cần bằng chứng riêng.

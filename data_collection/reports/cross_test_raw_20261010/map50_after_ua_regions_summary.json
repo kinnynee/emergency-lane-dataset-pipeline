@@ -1,0 +1,15 @@
+{
+  "source_pickle_sha256": "0822f98bdb44a235900a4fa7602e07c23a9b86712395890207b311c3be234a6a",
+  "ua_ignore_regions": 29,
+  "method": "score>=0.01; NMS 0.5 and top 100 preapplied in pickle; per-image greedy IoU>=0.5; unmatched local ign/bo IoU>0.3 and UA source IoA>=0.5 excluded; no guard; all-point precision-envelope AP@50; unweighted mean of sequence AP",
+  "sequence_count": 10,
+  "image_count": 12522,
+  "mean_ap50_pct": {
+    "ua_8_full_H1": 94.24439359083654,
+    "ua_8_full_H3": 95.42112441716054,
+    "all_10_full_H1": 89.66076040092406,
+    "all_10_full_H3": 90.60214506198326,
+    "ua_8_squash_H1": 88.97337629137198,
+    "ua_8_letterbox_H1": 76.55415457525622
+  }
+}

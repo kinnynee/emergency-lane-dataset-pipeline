@@ -36,7 +36,8 @@ The 2026-10-10 research audit reconciles the local `dataset-v1-full-reexport` at
 - [`data_collection/reports/model_and_replay_release_status.md`](data_collection/reports/model_and_replay_release_status.md): current blocked/verified release evidence; no stale replay metrics.
 - [`data_collection/reports/dataset_audit.md`](data_collection/reports/dataset_audit.md): exported image counts by source and split.
 - [`data_collection/reports/leakage_report.md`](data_collection/reports/leakage_report.md): checked split IDs and outstanding leakage risks.
-- [`data_collection/reports/evaluation_summary.md`](data_collection/reports/evaluation_summary.md): offline YOLOv8n results and evidence levels.
+- [`data_collection/reports/evaluation_summary.md`](data_collection/reports/evaluation_summary.md): offline YOLOv8n results and evidence levels, including 09 October mAP@50 after UA ignore.
+- [`data_collection/reports/BAO_CAO_SO_LIEU_TOM_TAT.md`](data_collection/reports/BAO_CAO_SO_LIEU_TOM_TAT.md): compact dataset and model metrics with the corrected 09 October figures.
 - [`data_collection/reports/missing_evidence.md`](data_collection/reports/missing_evidence.md): evidence still needed for research claims.
 - [`data_collection/reports/data_collection_checklist.md`](data_collection/reports/data_collection_checklist.md): K230 field collection checklist.
 - [`k230/README.md`](k230/README.md): fail-closed CanMV integration and required board log markers.

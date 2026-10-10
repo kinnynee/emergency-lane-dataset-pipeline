@@ -1,6 +1,6 @@
 # BÁO CÁO ĐÁNH GIÁ MÔ HÌNH PHÁT HIỆN PHƯƠNG TIỆN YOLOv8n
 
-> **Lưu trữ bản 07/10/2026.** FP và precision chưa trừ 29 vùng ignore UA trong tài liệu này đã được thay thế bởi [số chính thức ngày 09/10](SO_LIEU_09_10_2026.md). Khi viết bài báo, dùng [LDKC-23 đã cập nhật](../evaluation_summary.md) và các JSON gốc được dẫn tại đó.
+> **Lưu trữ bản 07/10/2026.** mAP@50, FP và precision chưa trừ 29 vùng ignore UA trong tài liệu này đã được thay thế bởi [số chính thức ngày 09/10](SO_LIEU_09_10_2026.md). Khi viết bài báo, dùng [LDKC-23 đã cập nhật](../evaluation_summary.md) và các bảng kiểm lại được dẫn tại đó.
 
 **Cơ sở lập báo cáo:** tệp *BANG_SO_LIEU_BAI_BAO.md* do người dùng cung cấp. Các kết quả dưới đây được tổng hợp từ bảng số liệu đó; báo cáo này không chạy lại mã đánh giá hoặc kiểm chứng các tệp JSON gốc.
 **Phạm vi:** đánh giá mô hình đầy đủ trên tập cross_test, phép thử hình học với hai mô hình 500 ảnh, và đối chiếu ONNX với kmodel bằng trình mô phỏng K230.

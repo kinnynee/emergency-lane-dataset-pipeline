@@ -4,7 +4,7 @@ Ngày rà soát: 10/10/2026. `MISSING` nghĩa là chưa thấy bằng chứng đ
 
 | Ưu tiên | Mục cần bổ sung thủ công | File/bằng chứng cần có | Lý do |
 |---|---|---|---|
-| 1 | Tái lập đầy đủ kết quả 09/10/2026 | Script chấm/McNemar gốc, checkpoint/ONNX đầy đủ và manifest train/test | [JSON 09/10 trên `tridung-train`](references/SO_LIEU_09_10_2026.md) đã có FP kmodel sau ignore và McNemar; [pickle dự đoán 10/10](cross_test_raw_20261010/cross_test_raw_detection_audit.md) kiểm lại recall, TP/FN/FP và precision ONNX. mAP, nguồn gốc checkpoint và p-value chưa chạy lại độc lập. |
+| 1 | Tái lập đầy đủ kết quả 09/10/2026 | Script chấm/McNemar gốc, checkpoint/ONNX đầy đủ và manifest train/test | [JSON 09/10 trên `tridung-train`](references/SO_LIEU_09_10_2026.md) có FP kmodel và McNemar; [pickle 10/10](cross_test_raw_20261010/cross_test_raw_detection_audit.md) kiểm lại recall, TP/FN/FP và precision ONNX; [mAP@50](cross_test_raw_20261010/map50_after_ua_regions.csv) đã tính lại từ box/score. Nguồn gốc checkpoint và p-value chưa chạy lại độc lập. |
 | 1 | 10 ảnh test cũ trùng train | Danh sách 10 path, SHA-256, split/version, run đã dùng | Hiện chỉ có mô tả trong yêu cầu; cần loại khỏi đánh giá độc lập sau xác minh. |
 | 1 | 58/81 video replay thuộc train | Manifest 81 video, 58 cặp trùng, train manifest checkpoint, kết quả replay tương ứng | Xác định run nào bị nhiễm và vô hiệu hóa kết luận held-out. |
 | 1 | Near duplicate/cùng video/camera giữa split | Full hash/pHash audit kèm cặp file, camera/location/session ID, reviewer | [Audit cũ](audit/FULL_EDA_AUDIT_REPORT.md) chỉ chứng minh một phần; export reexport mới kiểm ID/đường dẫn. |
