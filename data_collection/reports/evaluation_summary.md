@@ -2,7 +2,7 @@
 
 ## Mức chứng cứ
 
-`<DATA_ROOT>\dataset-v1-full-reexport\metadata\images.csv`, `export_summary.json`, `qc_report.json` xác nhận số ảnh và split. ZIP dự đoán thô do người dùng cung cấp ngày 10/10 có box/score/GT cho 12.522 ảnh; [báo cáo kiểm tra độc lập](cross_test_raw_20261010/cross_test_raw_detection_audit.md) và [CSV theo sequence](cross_test_raw_20261010/raw_detection_recall.csv) tính lại **recall, TP, FN, FP và precision ở ngưỡng vận hành**, khớp các số V8 được đối chiếu. [Báo cáo V8 ngày 07/10/2026](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) vẫn là nguồn của mAP@50, kmodel mô phỏng và độ phức tạp; JSON/script đánh giá gốc chưa có. Không chạy lại ONNX hoặc đo real-time trên board.
+`<DATA_ROOT>\dataset-v1-full-reexport\metadata\images.csv`, `export_summary.json`, `qc_report.json` xác nhận số ảnh và split. ZIP dự đoán thô ngày 10/10 có box/score/GT cho 12.522 ảnh; [CSV kiểm lại theo sequence](cross_test_raw_20261010/raw_detection_recall.csv) tính **recall, TP, FN, FP và precision sau 29 vùng ignore UA** ở ngưỡng vận hành. Người thực hiện thí nghiệm xác nhận phép kiểm khớp 140/140 ô GT/TP và 100/100 ô FP H1/H3 sau ignore. [Nguồn cập nhật 09/10](references/SO_LIEU_09_10_2026.md) dẫn trực tiếp đến JSON gốc trên nhánh `tridung-train`, gồm FP kmodel và McNemar. [Báo cáo V8 ngày 07/10](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) chỉ còn là nguồn lịch sử cho mAP@50 và số liệu mô hình chưa có artifact để kiểm riêng. Không chạy lại ONNX, McNemar hoặc đo trên board.
 
 ## Mô hình đầy đủ: kết quả theo sequence được báo cáo
 
@@ -28,14 +28,26 @@ Nguồn mAP@50: [mục 3.1 báo cáo V8](references/BAO_CAO_DANH_GIA_MO_HINH_V8.
 | Recall gộp UA H1 / H3, guard 25 | 74,43% / 82,11% | [V8 mục 3.1](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) |
 | Recall gộp AAU H1 / H3, guard 25 | 37,60% / 37,60% | [V8 mục 3.1](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) |
 | Recall H3 cả 10 sequence: ONNX / kmodel mô phỏng | 81,71% / 81,82% | [V8 mục 5](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) |
-| FP H3 guard 25: ONNX / kmodel mô phỏng | 19.908 / 19.782 | [V8 mục 5](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md); chưa có danh sách FP |
+| FP H3 guard 25 sau ignore UA: ONNX / kmodel mô phỏng | **2.633 / 2.535** | [JSON gốc 09/10, `gop.g25`](references/SO_LIEU_09_10_2026.md) |
+| Precision H3 guard 25 sau ignore UA: ONNX / kmodel mô phỏng | **97,12% / 97,22%** | [Cùng nguồn](references/SO_LIEU_09_10_2026.md) |
+| Precision ONNX trên 8 sequence UA, H1 / H3 sau ignore UA | **96,58% / 97,11%** | [CSV kiểm lại](cross_test_raw_20261010/raw_detection_recall.csv) |
 | 43/48 FP được xem là xe thật thiếu nhãn/vùng ignore | Chỉ là kết luận review được báo cáo | [V8 mục 3.3](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md); `MISSING` 48 ảnh, reviewer và quyết định từng ảnh |
 
-Precision UA trước khi áp dụng 29 vùng ignore gốc có thể thấp giả: [phép tính lại](cross_test_raw_20261010/cross_test_raw_detection_audit.md) cho full/H3 **TP 88.656, FN 19.842, FP 19.908**, khớp FP báo cáo. CSV có TP/FN/FP theo sequence; kết quả sau áp dụng 29 vùng UA chỉ là thăm dò, chưa dùng làm precision chính thức. McNemar có thể xét từ kết quả ghép cặp từng object trong pickle, nhưng cần chốt đơn vị độc lập hoặc cách xử lý frame cùng sequence; chưa tính p-value.
+FP và precision **sau ignore UA** là số chính thức cho bài báo. [Phép kiểm từ ZIP](cross_test_raw_20261010/cross_test_raw_detection_audit.md) cho full/H3 trên 10 sequence: GT 108.498, TP 88.656, FN 19.842, **FP 2.633**. Riêng 8 sequence UA: H1 TP 89.633, FP 3.175, precision **96,58%**; H3 TP 88.289, FP 2.625, precision **97,11%**. Cột FP trước ignore trong CSV/JSON được giữ để truy vết, không dùng làm kết quả công bố.
 
 ## Squash so với Letterbox trên 500 ảnh
 
-[V8 mục 4](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) nói hai model YOLOv8n cùng 500 ảnh train. Từ pickle, H1/8 sequence UA/guard 25 tính lại recall squash **66,39%**, letterbox **47,74%** và precision tương ứng **86,23% / 90,68%** khi chưa áp dụng 29 vùng ignore UA gốc; xem [TP/FP/FN](cross_test_raw_20261010/cross_test_raw_detection_audit.md). Chưa có hai manifest 500 ảnh, checkpoint và cấu hình train để xác minh **cùng 500 ảnh train**. Chênh recall đã tính lại là **18,65 điểm phần trăm**; không dùng chênh +12,33 điểm từ hai quy mô train khác nhau. V8 còn báo cáo mAP@50 trung bình UA H1 squash 83,99% và letterbox 70,95%; mAP chưa tính lại và khác precision.
+[Báo cáo V8 mục 4](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) mô tả hai model YOLOv8n cùng 500 ảnh train. Từ pickle, H1/8 sequence UA/guard 25 tính lại recall squash **66,39%**, letterbox **47,74%** và precision **sau ignore UA 96,29% / 96,21%**; xem [TP/FP/FN](cross_test_raw_20261010/cross_test_raw_detection_audit.md). Chưa có hai manifest 500 ảnh, checkpoint và cấu hình train để xác minh độc lập **cùng 500 ảnh train**. Chênh recall **18,65 điểm phần trăm**, phù hợp [McNemar bắt cặp trong JSON gốc](references/SO_LIEU_09_10_2026.md); không dùng chênh +12,33 điểm từ hai quy mô train khác nhau. V8 còn báo cáo mAP@50 trung bình UA H1 squash 83,99% và letterbox 70,95%; mAP chưa tính lại và khác precision.
+
+## Bảng 4b — McNemar theo cụm 100 khung
+
+[JSON gốc trên `tridung-train`](references/SO_LIEU_09_10_2026.md) dùng từng nhãn xe bắt cặp, tính p theo các cụm 100 khung liên tiếp trong cùng sequence. Các p dưới đây được đọc từ JSON, chưa tính lại độc lập.
+
+| So sánh tại guard 25 | Chênh recall | p theo cụm | Diễn giải |
+|---|---:|---:|---|
+| V5 kmodel so với ONNX, H3, 300 ảnh | **−1,84 điểm** | **< 0,001** | Recall giảm sau lượng tử hoá trên mẫu 300 ảnh |
+| Full kmodel so với ONNX, H3, 12.522 ảnh | **+0,11 điểm** | **0,057** | Không quan sát thấy giảm; p này không chứng minh tương đương |
+| Squash V5 so với letterbox, H1, 8 sequence UA | **+18,65 điểm** | **< 0,001** | Squash có recall cao hơn trên tập so sánh cùng 500 ảnh train được báo cáo |
 
 ## Số liệu SV3 và giới hạn
 
@@ -46,4 +58,4 @@ Precision UA trước khi áp dụng 29 vùng ignore gốc có thể thấp gi�
 | max_boxes 20; guard 25 | **Được báo cáo**, chưa có run config gốc | [V8 mục 2.2](references/BAO_CAO_DANH_GIA_MO_HINH_V8.md) |
 | NMS mặc định firmware 0,2 khi thiếu config | `MISSING` firmware/build và runtime log | Không suy ra NMS thực chạy từ loader hoặc giá trị mặc định được nêu trong yêu cầu |
 
-Các khẳng định “V5 giảm 1,84 điểm trên 300 ảnh mới”, “model đầy đủ không giảm trên 12.522 ảnh”, “V5 đêm thấp hơn ngày 6,9 điểm sau chuẩn hóa” hiện `MISSING` cặp run và phép tính gốc; không thay bằng số của V8. Không dùng 97,9% và 95,4% để kết luận chính về suy giảm. Nếu không lấy được artifact/model log trước khi chốt bản nộp, bỏ bảng kích thước/tham số/GFLOPs hoặc ghi rõ chỉ là số chưa xác minh. [Báo cáo trạng thái model trong repo](model_and_replay_release_status.md) mô tả một pipeline YOLO11n khác, không phải bằng chứng cho checkpoint YOLOv8n V8.
+Hai kết quả V5 lượng tử hoá và full trên 12.522 ảnh đã có [JSON McNemar gốc](references/SO_LIEU_09_10_2026.md); nguồn này không phải phép đo trên board. Khẳng định “V5 đêm thấp hơn ngày 6,9 điểm sau chuẩn hóa” vẫn `MISSING` bảng theo điều kiện và phép chuẩn hóa. Không dùng 97,9% và 95,4% để kết luận chính về suy giảm. Nếu không lấy được artifact/model log trước khi chốt bản nộp, bỏ bảng kích thước/tham số/GFLOPs hoặc ghi rõ chỉ là số chưa xác minh. [Báo cáo trạng thái model trong repo](model_and_replay_release_status.md) mô tả một pipeline YOLO11n khác, không phải bằng chứng cho checkpoint YOLOv8n V8.

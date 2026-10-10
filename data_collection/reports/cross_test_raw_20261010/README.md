@@ -18,4 +18,4 @@ python data_collection/scripts/audit_cross_test_raw_detections.py `
   <output-directory>
 ```
 
-The script verifies both pickle SHA-256 values before restricted loading. `raw_detection_recall.csv` records the operating-point measurements. It does not reproduce mAP@50, kmodel simulation, or board FPS. The original evaluator and model training manifests are still required for publication-level provenance.
+The script verifies both pickle SHA-256 values before restricted loading. `raw_detection_recall.csv` records the operating-point measurements. For publication metrics use `fp_after_ua_regions` and `precision_after_ua_regions_pct` at guard 25; the without-UA-region columns preserve the 07 October comparison only. The experiment owner confirmed all 140 GT/TP cells and all 100 H1/H3 FP-after-ignore cells against the official evaluator. [The 09 October source note](../references/SO_LIEU_09_10_2026.md) links the original kmodel and clustered McNemar JSON. This script does not reproduce mAP@50, kmodel simulation, McNemar, or board FPS.
